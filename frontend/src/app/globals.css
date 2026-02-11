@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ededed;
+  --surface: #1a1a1a;
+  --surface-hover: #2a2a2a;
+  --border: #333333;
+  --accent: #00A9E5;
+  --accent-hover: #0088c4;
 }
 
 @theme inline {
@@ -12,11 +17,25 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Gradient definitions */
+.gradient-primary {
+  background: linear-gradient(135deg, #00A9E5, #019B8F);
+}
+
+.gradient-secondary {
+  background: linear-gradient(135deg, #F9B110, #FED10A);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #00BFB3, #00A9E5);
+}
+
+.gradient-warm {
+  background: linear-gradient(135deg, #FED10A, #F9B110);
+}
+
+.gradient-cool {
+  background: linear-gradient(135deg, #019B8F, #00BFB3);
 }
 
 body {

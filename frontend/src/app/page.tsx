@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { apiService, CourseResponse, Course, NoteResponse, NoteCreate, NoteUpdate } from "@/services/api";
+import { apiService, Course, NoteResponse } from "@/services/api";
 
 type TabType = "slides" | "upload" | "addCourse" | "notes";
 
@@ -15,6 +15,7 @@ export default function Home() {
   const [expandedSlides, setExpandedSlides] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   // State for courses and their slides
   const [courses, setCourses] = useState<CourseWithSlides[]>([]);
@@ -117,11 +118,13 @@ export default function Home() {
 
     try {
       setError(null);
+      setSuccess(null);
       await apiService.createCourse({
         course_id: courseForm.id,
         course_name: courseForm.name
       });
       
+      setSuccess("Course added successfully!");
       setCourseForm({ id: "", name: "" });
       await fetchCourses(); // Refresh courses list
     } catch (err) {
@@ -137,6 +140,7 @@ export default function Home() {
 
     try {
       setError(null);
+      setSuccess(null);
       await apiService.uploadPdf(
         uploadForm.pdfFile,
         uploadForm.courseId,
@@ -144,6 +148,7 @@ export default function Home() {
         uploadForm.title
       );
       
+      setSuccess("Slide uploaded successfully!");
       setUploadForm({ title: "", courseId: "", pdfFile: null });
       // Refresh slides if the course is expanded
       if (expandedCourses.has(uploadForm.courseId)) {
@@ -174,7 +179,9 @@ export default function Home() {
 
     try {
       setError(null);
+      setSuccess(null);
       await apiService.createNote({ notes: noteForm.notes });
+      setSuccess("Note created successfully!");
       setNoteForm({ notes: "" });
       await fetchNotes(); // Refresh notes list
     } catch (err) {
@@ -190,7 +197,9 @@ export default function Home() {
 
     try {
       setError(null);
+      setSuccess(null);
       await apiService.updateNote(noteId, { notes: updatedNotes });
+      setSuccess("Note updated successfully!");
       setEditingNote(null);
       await fetchNotes(); // Refresh notes list
     } catch (err) {
@@ -205,7 +214,9 @@ export default function Home() {
 
     try {
       setError(null);
+      setSuccess(null);
       await apiService.deleteNote(noteId);
+      setSuccess("Note deleted successfully!");
       await fetchNotes(); // Refresh notes list
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete note");
@@ -213,38 +224,37 @@ export default function Home() {
   };
 
   const leftTabs = [
-    { id: "slides" as TabType, label: "Slides", icon: "📊" },
-    { id: "upload" as TabType, label: "Upload", icon: "📤" },
-    { id: "addCourse" as TabType, label: "Add Course", icon: "➕" },
-    { id: "notes" as TabType, label: "Notes", icon: "📝" }
+    { id: "slides" as TabType, label: "Slides" },
+    { id: "upload" as TabType, label: "Upload" },
+    { id: "addCourse" as TabType, label: "Add Course" },
+    { id: "notes" as TabType, label: "Notes" }
   ];
 
   if (loading && courses.length === 0) {
     return (
-      <div className="flex h-screen bg-gray-50 items-center justify-center">
+      <div className="flex h-screen bg-black items-center justify-center">
         <div className="text-center">
-          <div className="text-xl text-gray-600">Loading...</div>
+          <div className="text-xl text-gray-300">Loading...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-black">
       {/* Left Toggle Bar */}
-      <div className="w-20 bg-white border-r border-gray-200 flex flex-col items-center py-4 space-y-4">
+      <div className="w-40 bg-gray-900 border-r border-gray-700 flex flex-col items-center py-4 space-y-3">
         {leftTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`w-16 h-16 rounded-lg flex flex-col items-center justify-center transition-colors ${
+            className={`w-32 h-12 rounded-lg flex items-center justify-center transition-all ${
               activeTab === tab.id
-                ? "bg-blue-500 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "gradient-primary text-white shadow-lg shadow-blue-500/25"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
             }`}
           >
-            <span className="text-xl mb-1">{tab.icon}</span>
-            <span className="text-xs font-medium">{tab.label}</span>
+            <span className="text-sm font-medium">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -252,11 +262,23 @@ export default function Home() {
       {/* Main Content */}
       <div className="flex-1 p-6 overflow-auto">
         {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-            {error}
+          <div className="mb-4 p-4 bg-red-900/30 border border-red-700 text-red-300 rounded-lg flex items-center justify-between">
+            <span>{error}</span>
             <button
               onClick={() => setError(null)}
-              className="ml-4 text-red-500 hover:text-red-700"
+              className="ml-4 text-red-400 hover:text-red-200 text-xl"
+            >
+              ×
+            </button>
+          </div>
+        )}
+        
+        {success && (
+          <div className="mb-4 p-4 bg-green-900/30 border border-green-700 text-green-300 rounded-lg flex items-center justify-between">
+            <span>{success}</span>
+            <button
+              onClick={() => setSuccess(null)}
+              className="ml-4 text-green-400 hover:text-green-200 text-xl"
             >
               ×
             </button>
@@ -265,53 +287,53 @@ export default function Home() {
 
         {activeTab === "slides" && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">Slides</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">Slides</h2>
             {courses.length === 0 ? (
-              <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
-                <div className="text-gray-500">No courses found. Add a course to get started.</div>
+              <div className="bg-gray-900 rounded-lg border border-gray-700 p-8 text-center">
+                <div className="text-gray-400">No courses found. Add a course to get started.</div>
               </div>
             ) : (
               courses.map((course) => (
-                <div key={course.id} className="bg-white rounded-lg border border-gray-200">
+                <div key={course.id} className="bg-gray-900 rounded-lg border border-gray-700">
                   <button
                     onClick={() => toggleCourse(course.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800 transition-colors"
                   >
                     <div className="text-left">
-                      <div className="font-semibold text-gray-800">{course.name}</div>
-                      <div className="text-sm text-gray-500">ID: {course.id}</div>
+                      <div className="font-semibold text-white">{course.name}</div>
+                      <div className="text-sm text-gray-400">ID: {course.id}</div>
                     </div>
-                    <span className="text-gray-400">
+                    <span className="text-gray-500">
                       {expandedCourses.has(course.id) ? "▼" : "▶"}
                     </span>
                   </button>
                   
                   {expandedCourses.has(course.id) && slidesData[course.id] && (
-                    <div className="border-t border-gray-200">
+                    <div className="border-t border-gray-700">
                       {slidesData[course.id].length === 0 ? (
-                        <div className="px-8 py-4 text-gray-500 text-sm">
+                        <div className="px-8 py-4 text-gray-400 text-sm">
                           No slides found for this course.
                         </div>
                       ) : (
                         slidesData[course.id].map((slide: any, index: number) => (
-                          <div key={slide.id || index} className="border-b border-gray-100 last:border-b-0">
+                          <div key={slide.id || index} className="border-b border-gray-800 last:border-b-0">
                             <button
                               onClick={() => toggleSlide(`${course.id}-${slide.id || index}`)}
-                              className="w-full px-8 py-2 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                              className="w-full px-8 py-2 flex items-center justify-between hover:bg-gray-800 transition-colors"
                             >
-                              <span className="text-sm text-gray-700">{slide.title}</span>
-                              <span className="text-gray-400">
+                              <span className="text-sm text-gray-300">{slide.title}</span>
+                              <span className="text-gray-500">
                                 {expandedSlides.has(`${course.id}-${slide.id || index}`) ? "▼" : "▶"}
                               </span>
                             </button>
                             
                             {expandedSlides.has(`${course.id}-${slide.id || index}`) && (
-                              <div className="px-8 py-4 bg-gray-50 border-t border-gray-100">
-                                <div className="text-sm text-gray-600 mb-2">PDF Desktop View</div>
-                                <div className="bg-white border border-gray-300 rounded p-4 h-64 flex items-center justify-center overflow-hidden">
+                              <div className="px-8 py-4 bg-gray-800 border-t border-gray-700">
+                                <div className="text-sm text-gray-400 mb-2">PDF Desktop View</div>
+                                <div className="bg-gray-900 border border-gray-600 rounded p-4 h-64 flex items-center justify-center overflow-hidden">
                                   <div className="text-center">
-                                    <div className="text-gray-400 text-sm mb-2">{slide.title}</div>
-                                    <div className="text-gray-400 text-xs">
+                                    <div className="text-gray-500 text-sm mb-2">{slide.title}</div>
+                                    <div className="text-gray-600 text-xs">
                                       Filename: {slide.filename}
                                     </div>
                                   </div>
@@ -331,30 +353,30 @@ export default function Home() {
 
         {activeTab === "upload" && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">Upload Slide</h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-2xl font-bold text-white">Upload Slide</h2>
+            <div className="bg-gray-900 rounded-lg border border-gray-700 p-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Title
                   </label>
                   <input
                     type="text"
                     value={uploadForm.title}
                     onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter slide title"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Course
                   </label>
                   <select
                     value={uploadForm.courseId}
                     onChange={(e) => setUploadForm({ ...uploadForm, courseId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select a course</option>
                     {courses.map((course) => (
@@ -366,21 +388,21 @@ export default function Home() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     PDF File
                   </label>
                   <input
                     type="file"
                     accept=".pdf"
                     onChange={(e) => setUploadForm({ ...uploadForm, pdfFile: e.target.files?.[0] || null })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
                 
                 <button
                   onClick={handleUpload}
                   disabled={!uploadForm.title || !uploadForm.courseId || !uploadForm.pdfFile}
-                  className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full gradient-primary text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:bg-gray-700 disabled:cursor-not-allowed disabled:hover:opacity-100"
                 >
                   Upload Slide
                 </button>
@@ -391,31 +413,31 @@ export default function Home() {
 
         {activeTab === "addCourse" && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">Add New Course</h2>
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <h2 className="text-2xl font-bold text-white">Add New Course</h2>
+            <div className="bg-gray-900 rounded-lg border border-gray-700 p-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Course ID
                   </label>
                   <input
                     type="text"
                     value={courseForm.id}
                     onChange={(e) => setCourseForm({ ...courseForm, id: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., CS101"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Course Name
                   </label>
                   <input
                     type="text"
                     value={courseForm.name}
                     onChange={(e) => setCourseForm({ ...courseForm, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., Introduction to Computer Science"
                   />
                 </div>
@@ -423,7 +445,7 @@ export default function Home() {
                 <button
                   onClick={handleAddCourse}
                   disabled={!courseForm.id || !courseForm.name}
-                  className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full gradient-secondary text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:bg-gray-700 disabled:cursor-not-allowed disabled:hover:opacity-100"
                 >
                   Add Course
                 </button>
@@ -434,20 +456,20 @@ export default function Home() {
 
         {activeTab === "notes" && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-gray-800">Notes</h2>
+            <h2 className="text-2xl font-bold text-white">Notes</h2>
             
             {/* Create New Note */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Create New Note</h3>
+            <div className="bg-gray-900 rounded-lg border border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Create New Note</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
                     Note Content
                   </label>
                   <textarea
                     value={noteForm.notes}
                     onChange={(e) => setNoteForm({ ...noteForm, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     rows={4}
                     placeholder="Enter your note content here..."
                   />
@@ -456,7 +478,7 @@ export default function Home() {
                 <button
                   onClick={handleCreateNote}
                   disabled={!noteForm.notes.trim()}
-                  className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full gradient-accent text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:bg-gray-700 disabled:cursor-not-allowed disabled:hover:opacity-100"
                 >
                   Create Note
                 </button>
@@ -464,25 +486,25 @@ export default function Home() {
             </div>
 
             {/* Notes List */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Existing Notes</h3>
+            <div className="bg-gray-900 rounded-lg border border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">Existing Notes</h3>
               {notesLoading ? (
                 <div className="text-center py-8">
-                  <div className="text-gray-500">Loading notes...</div>
+                  <div className="text-gray-400">Loading notes...</div>
                 </div>
               ) : notes.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="text-gray-500">No notes found. Create your first note above.</div>
+                  <div className="text-gray-400">No notes found. Create your first note above.</div>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {notes.map((note) => (
-                    <div key={note.id} className="border border-gray-200 rounded-lg p-4">
+                    <div key={note.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800">
                       {editingNote === note.id ? (
                         <div className="space-y-3">
                           <textarea
                             defaultValue={note.notes}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             rows={4}
                             id={`edit-${note.id}`}
                           />
@@ -492,13 +514,13 @@ export default function Home() {
                                 const textarea = document.getElementById(`edit-${note.id}`) as HTMLTextAreaElement;
                                 handleUpdateNote(note.id, textarea.value);
                               }}
-                              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
                             >
                               Save
                             </button>
                             <button
                               onClick={() => setEditingNote(null)}
-                              className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
                             >
                               Cancel
                             </button>
@@ -506,17 +528,17 @@ export default function Home() {
                         </div>
                       ) : (
                         <div>
-                          <p className="text-gray-700 whitespace-pre-wrap mb-3">{note.notes}</p>
+                          <p className="text-gray-300 whitespace-pre-wrap mb-3">{note.notes}</p>
                           <div className="flex space-x-2">
                             <button
                               onClick={() => setEditingNote(note.id)}
-                              className="bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                              className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition-colors text-sm"
                             >
                               Edit
                             </button>
                             <button
                               onClick={() => handleDeleteNote(note.id)}
-                              className="bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors text-sm"
+                              className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-colors text-sm"
                             >
                               Delete
                             </button>
@@ -533,15 +555,15 @@ export default function Home() {
       </div>
 
       {/* Right Toggle Bar - Agent Chat Interface */}
-      <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800">Agent Chat</h3>
+      <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col">
+        <div className="p-4 border-b border-gray-700 gradient-cool">
+          <h3 className="text-lg font-semibold text-white">Agent Chat</h3>
         </div>
         <div className="flex-1 p-4">
-          <div className="h-full flex items-center justify-center text-gray-400">
+          <div className="h-full flex items-center justify-center text-gray-500">
             <div className="text-center">
               <div className="text-4xl mb-2">💬</div>
-              <div>Chat interface will be implemented here</div>
+              <div className="text-gray-400">Chat interface will be implemented here</div>
             </div>
           </div>
         </div>
