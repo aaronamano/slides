@@ -1,0 +1,8 @@
+elasticsearch
+fastapi
+uvicorn
+python-dotenv
+cors
+sentence-transformers
+PyPDF2
+python-multipart
