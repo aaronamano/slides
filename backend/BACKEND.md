@@ -28,14 +28,19 @@ pip install -r requirements.txt
 # Folder Structure
 ```
 └── backend
-    └── elastic-search # actual database
-        ├── init.py # run this file ONCE
-    └── elastic-search-test # tested creation and insertion into index db
-        ├── ingest.py
-        ├── init.py
+    └── __pycache__
+        ├── course_service.cpython-314.pyc
+        ├── mongo_client.cpython-314.pyc
+        ├── note_service.cpython-314.pyc
+    └── elastic-search
+        ├── init.py # run this file ONCE to define mappings
     ├── .env
     ├── .gitignore
+    ├── api.py
     ├── BACKEND.md
+    ├── course_service.py
+    ├── mongo_client.py
+    ├── note_service.py
     └── requirements.txt
 ```
 
@@ -46,3 +51,17 @@ pip install -r requirements.txt
 
 # Process
 import PDF file ➡️ extract text ➡️ embed text to 1024 dimension vectors ➡️ add extracted text to `text_content` as a string and add vector embeddings to `vector_content` as an array of decimal values
+
+# MongoDB
+## Courses Collection
+```typescript
+{
+  "course_id": String,
+  "course_name": String,
+}
+```
+## Notes Collection
+```typescript
+{
+  "notes": String
+}
