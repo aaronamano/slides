@@ -1,11 +1,13 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+
 from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
 import os
 import PyPDF2
 from sentence_transformers import SentenceTransformer
 import io
+import base64
 from typing import List
 
 from course_service import CourseCreate, CourseUpdate, CourseResponse, CourseService
@@ -36,45 +38,44 @@ model = SentenceTransformer('all-roberta-large-v1')
 
 index_name = "lecture-slides-index"
 
-@app.post("/api/upload")
-async def upload_pdf(
-    file: UploadFile = File(...),
-    course_id: str = Form(...),
-    course_name: str = Form(...),
-    title: str = Form(...)
-):
+
+
+@app.get("/")
+async def get_message():
+    return "Hello World"
+
+
+
+@app.get("/api/pdf/{document_id}")
+async def get_pdf_binary(document_id: str):
+    """Retrieve PDF binary data from Elasticsearch"""
     try:
-        pdf_content = await file.read()
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
+        response = client.get(index=index_name, id=document_id)
         
-        text_content = ""
-        for page in pdf_reader.pages:
-            text_content += page.extract_text()
+        if not response['found']:
+            raise HTTPException(status_code=404, detail="Document not found")
         
-        vector_content = model.encode(text_content).tolist()
+        doc = response['_source']
         
-        doc = {
-            "course_id": course_id,
-            "course_name": course_name,
-            "filename": file.filename,
-            "title": title,
-            "text_content": text_content,
-            "vector_content": vector_content
-        }
-        
-        response = client.index(index=index_name, body=doc)
+        # Check if document has binary data
+        if not doc.get('has_binary', False) or not doc.get('pdf_binary'):
+            raise HTTPException(
+                status_code=404, 
+                detail="PDF binary data not available for this document"
+            )
         
         return {
-            "message": "PDF uploaded and processed successfully",
-            "document_id": response['_id'],
-            "course_id": course_id,
-            "course_name": course_name,
-            "title": title,
-            "filename": file.filename
+            "document_id": document_id,
+            "filename": doc.get('filename'),
+            "pdf_binary": doc.get('pdf_binary'),
+            "pdf_size": doc.get('pdf_size'),
+            "title": doc.get('title')
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": f"Failed to process PDF: {str(e)}"}
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve PDF: {str(e)}")
 
 @app.get("/api/slides/{course_id}")
 async def get_slides_by_course(course_id: str):
@@ -98,13 +99,69 @@ async def get_slides_by_course(course_id: str):
                 "course_name": hit['_source']['course_name'],
                 "filename": hit['_source']['filename'],
                 "title": hit['_source']['title'],
-                "text_content": hit['_source']['text_content']
+                "text_content": hit['_source']['text_content'],
+                "has_binary": hit['_source'].get('has_binary', False)
             })
             
         return {"slides": slides, "total": len(slides)}
         
     except Exception as e:
         return {"error": f"Failed to retrieve slides: {str(e)}"}
+
+@app.post("/api/upload")
+async def upload_pdf(
+    file: UploadFile = File(...),
+    course_id: str = Form(...),
+    course_name: str = Form(...),
+    title: str = Form(...)
+):
+    try:
+        pdf_content = await file.read()
+        pdf_size = len(pdf_content)
+        
+
+        
+        # Convert PDF to Base64 for Elasticsearch storage
+        pdf_binary = base64.b64encode(pdf_content).decode('utf-8')
+        
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
+        
+        text_content = ""
+        for page in pdf_reader.pages:
+            text_content += page.extract_text()
+        
+        vector_content = model.encode(text_content).tolist()
+        
+        # Enhanced document with binary storage
+        doc = {
+            "course_id": course_id,
+            "course_name": course_name,
+            "filename": file.filename,
+            "title": title,
+            "text_content": text_content,
+            "vector_content": vector_content,
+            "pdf_binary": pdf_binary,
+            "pdf_size": pdf_size,
+            "has_binary": True
+        }
+        
+        response = client.index(index=index_name, body=doc)
+        
+        return {
+            "message": "PDF uploaded and processed successfully",
+            "document_id": response['_id'],
+            "course_id": course_id,
+            "course_name": course_name,
+            "title": title,
+            "filename": file.filename,
+            "pdf_size": pdf_size,
+            "has_binary": True
+        }
+        
+    except Exception as e:
+        return {"error": f"Failed to process PDF: {str(e)}"}
+
+
 
 # Course CRUD API Routes
 @app.get("/api/courses", response_model=List[CourseResponse])

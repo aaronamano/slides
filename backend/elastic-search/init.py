@@ -19,7 +19,14 @@ mappings = {
         "filename": { "type": "keyword" },
         "title": { "type": "text" },
         "text_content": { "type": "text" },
-        "vector_content": { "type": "dense_vector", "dims": 1024, "index": True, "similarity": "cosine" }
+        "vector_content": { "type": "dense_vector", "dims": 1024, "index": True, "similarity": "cosine" },
+        "pdf_binary": { 
+            "type": "binary", 
+            "store": True,
+            "doc_values": False 
+        },
+        "pdf_size": { "type": "long" },
+        "has_binary": { "type": "boolean" }
     }
 }
 

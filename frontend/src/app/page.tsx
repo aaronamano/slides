@@ -20,6 +20,7 @@ export default function Home() {
   // State for courses and their slides
   const [courses, setCourses] = useState<CourseWithSlides[]>([]);
   const [slidesData, setSlidesData] = useState<{ [key: string]: any[] }>({});
+  const [pdfDataUrls, setPdfDataUrls] = useState<{ [key: string]: string }>({});
 
   // Form states
   const [uploadForm, setUploadForm] = useState({
@@ -40,6 +41,10 @@ export default function Home() {
     notes: ""
   });
   const [editingNote, setEditingNote] = useState<string | null>(null);
+
+
+
+
 
   // Fetch courses on component mount
   useEffect(() => {
@@ -100,12 +105,24 @@ export default function Home() {
     setExpandedCourses(newExpanded);
   };
 
-  const toggleSlide = (slideId: string) => {
+  const toggleSlide = async (slideId: string, documentId: string, hasBinary: boolean) => {
     const newExpanded = new Set(expandedSlides);
-    if (newExpanded.has(slideId)) {
-      newExpanded.delete(slideId);
+    const slideKey = slideId;
+    
+    if (newExpanded.has(slideKey)) {
+      newExpanded.delete(slideKey);
     } else {
-      newExpanded.add(slideId);
+      newExpanded.add(slideKey);
+      
+      // Load PDF binary data if available and not already loaded
+      if (hasBinary && !pdfDataUrls[documentId]) {
+        try {
+          await loadPdfBinary(slideId, documentId);
+        } catch (error) {
+          console.error('Failed to load PDF:', error);
+          setError('Failed to load PDF content');
+        }
+      }
     }
     setExpandedSlides(newExpanded);
   };
@@ -223,6 +240,42 @@ export default function Home() {
     }
   };
 
+  const loadPdfBinary = async (slideId: string, documentId: string): Promise<string> => {
+    if (pdfDataUrls[documentId]) {
+      return pdfDataUrls[documentId];
+    }
+
+    try {
+      const pdfData = await apiService.getPdfBinary(documentId);
+      const base64Content = pdfData.pdf_binary;
+      
+      // Convert base64 to blob and create object URL
+      const binaryString = atob(base64Content);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+      
+      // Cache the URL
+      setPdfDataUrls(prev => ({
+        ...prev,
+        [documentId]: objectUrl
+      }));
+      
+      return objectUrl;
+    } catch (error) {
+      console.error('Failed to load PDF binary:', error);
+      throw error;
+    }
+  };
+
+
+
+
+
   const leftTabs = [
     { id: "slides" as TabType, label: "Slides" },
     { id: "upload" as TabType, label: "Upload" },
@@ -318,7 +371,7 @@ export default function Home() {
                         slidesData[course.id].map((slide: any, index: number) => (
                           <div key={slide.id || index} className="border-b border-gray-800 last:border-b-0">
                             <button
-                              onClick={() => toggleSlide(`${course.id}-${slide.id || index}`)}
+                              onClick={() => toggleSlide(`${course.id}-${slide.id || index}`, slide.id, slide.has_binary || false)}
                               className="w-full px-8 py-2 flex items-center justify-between hover:bg-gray-800 transition-colors"
                             >
                               <span className="text-sm text-gray-300">{slide.title}</span>
@@ -329,12 +382,63 @@ export default function Home() {
                             
                             {expandedSlides.has(`${course.id}-${slide.id || index}`) && (
                               <div className="px-8 py-4 bg-gray-800 border-t border-gray-700">
-                                <div className="text-sm text-gray-400 mb-2">PDF Desktop View</div>
-                                <div className="bg-gray-900 border border-gray-600 rounded p-4 h-64 flex items-center justify-center overflow-hidden">
-                                  <div className="text-center">
-                                    <div className="text-gray-500 text-sm mb-2">{slide.title}</div>
-                                    <div className="text-gray-600 text-xs">
-                                      Filename: {slide.filename}
+                                <div className="flex items-center justify-between mb-4">
+                                  <div className="text-sm text-gray-400">PDF Desktop View</div>
+                                  <div className="text-xs text-gray-500">
+                                    Filename: {slide.filename}
+                                  </div>
+                                </div>
+                                
+                                <div className="bg-gray-900 border border-gray-600 rounded-lg overflow-hidden">
+                                  <div className="h-96">
+                                    {(slide.has_binary && pdfDataUrls[slide.id]) ? (
+                                      <iframe
+                                        src={pdfDataUrls[slide.id]}
+                                        className="w-full h-full rounded-lg"
+                                        title={slide.title}
+                                        onError={(e) => {
+                                          const target = e.target as HTMLIFrameElement;
+                                          target.style.display = 'none';
+                                          const errorDiv = target.parentElement?.querySelector('.pdf-error');
+                                          if (errorDiv) {
+                                            (errorDiv as HTMLElement).style.display = 'flex';
+                                          }
+                                        }}
+                                      />
+                                    ) : slide.has_binary ? (
+                                      <div className="flex items-center justify-center h-full text-gray-400">
+                                        <div className="text-center">
+                                          <div className="text-lg mb-2">Loading PDF...</div>
+                                          <div className="text-sm">Retrieving PDF from database</div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <iframe
+                                        src={`http://localhost:8001/api/files/${slide.filename}`}
+                                        className="w-full h-full rounded-lg"
+                                        title={slide.title}
+                                        onError={(e) => {
+                                          const target = e.target as HTMLIFrameElement;
+                                          target.style.display = 'none';
+                                          const errorDiv = target.parentElement?.querySelector('.pdf-error');
+                                          if (errorDiv) {
+                                            (errorDiv as HTMLElement).style.display = 'flex';
+                                          }
+                                        }}
+                                      />
+                                    )}
+                                    
+                                    <div className="pdf-error hidden items-center justify-center h-full text-gray-400 bg-gray-800 rounded-lg">
+                                      <div className="text-center p-4">
+                                        <div className="text-lg mb-2">PDF Not Available</div>
+                                        <div className="text-sm mb-4">The original PDF file is not accessible</div>
+                                        <div className="bg-gray-900 border border-gray-600 rounded-lg p-4 max-h-64 overflow-auto text-left">
+                                          <div className="text-sm text-gray-300 font-mono whitespace-pre-wrap">
+                                            {slide.text_content.substring(0, 500)}
+                                            {slide.text_content.length > 500 ? '...' : ''}
+                                          </div>
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -391,12 +495,24 @@ export default function Home() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     PDF File
                   </label>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setUploadForm({ ...uploadForm, pdfFile: e.target.files?.[0] || null })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => setUploadForm({ ...uploadForm, pdfFile: e.target.files?.[0] || null })}
+                      className="hidden"
+                      id="pdf-file-input"
+                    />
+                    <label
+                      htmlFor="pdf-file-input"
+                      className="px-4 py-2 bg-linear-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-full cursor-pointer hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                    >
+                      Choose File
+                    </label>
+                    <span className="text-sm text-gray-400">
+                      {uploadForm.pdfFile ? uploadForm.pdfFile.name : "No file selected"}
+                    </span>
+                  </div>
                 </div>
                 
                 <button
