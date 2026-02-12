@@ -37,3 +37,9 @@ class MongoClient:
         """Get notes collection"""
         db = await cls.get_database()
         return db.notes
+    
+    @classmethod
+    async def get_folders_collection(cls):
+        """Get folders collection"""
+        db = await cls.get_database()
+        return db.folders

@@ -5,13 +5,16 @@ from bson import ObjectId
 
 class NoteCreate(BaseModel):
     notes: str
+    folder_id: Optional[str] = None
 
 class NoteUpdate(BaseModel):
     notes: Optional[str] = None
+    folder_id: Optional[str] = None
 
 class NoteResponse(BaseModel):
     id: str
     notes: str
+    folder_id: Optional[str] = None
     
     class Config:
         from_attributes = True
@@ -32,6 +35,9 @@ class NoteService:
             note_doc = {
                 "notes": note.notes
             }
+            
+            if note.folder_id:
+                note_doc["folder_id"] = note.folder_id
             
             result = await collection.insert_one(note_doc)
             
@@ -83,6 +89,9 @@ class NoteService:
             
             if note_update.notes:
                 update_data["notes"] = note_update.notes
+            
+            if note_update.folder_id is not None:
+                update_data["folder_id"] = note_update.folder_id
             
             if update_data:
                 await collection.update_one(

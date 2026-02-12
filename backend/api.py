@@ -12,12 +12,14 @@ from typing import List
 
 from course_service import CourseCreate, CourseUpdate, CourseResponse, CourseService
 from note_service import NoteCreate, NoteUpdate, NoteResponse, NoteService
+from folder_service import FolderCreate, FolderUpdate, FolderResponse, FolderService
 
 app = FastAPI()
 
 # Initialize Services
 course_service = CourseService()
 note_service = NoteService()
+folder_service = FolderService()
 
 app.add_middleware(
     CORSMiddleware,
@@ -280,6 +282,62 @@ async def delete_note(note_id: str):
         if not success:
             raise HTTPException(status_code=404, detail="Note not found")
         return {"message": "Note deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Folder CRUD API Routes
+@app.get("/api/folders", response_model=List[FolderResponse])
+async def get_all_folders():
+    """Get all folders"""
+    try:
+        return await folder_service.get_all_folders()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/folders/{folder_id}", response_model=FolderResponse)
+async def get_folder_by_id(folder_id: str):
+    """Get a specific folder by ID"""
+    try:
+        folder = await folder_service.get_folder_by_id(folder_id)
+        if not folder:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        return folder
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/folders", response_model=FolderResponse)
+async def create_folder(folder: FolderCreate):
+    """Create a new folder"""
+    try:
+        return await folder_service.create_folder(folder)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/folders/{folder_id}", response_model=FolderResponse)
+async def update_folder(folder_id: str, folder_update: FolderUpdate):
+    """Update an existing folder"""
+    try:
+        folder = await folder_service.update_folder(folder_id, folder_update)
+        if not folder:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        return folder
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/folders/{folder_id}")
+async def delete_folder(folder_id: str):
+    """Delete a folder"""
+    try:
+        success = await folder_service.delete_folder(folder_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Folder not found")
+        return {"message": "Folder deleted successfully"}
     except HTTPException:
         raise
     except Exception as e:

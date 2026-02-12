@@ -79,6 +79,15 @@ import PDF file ➡️ extract text ➡️ embed text to 1024 dimension vectors 
 
 ```typescript
 {
+  "folder_id": String,
   "notes": String
+}
+```
+
+## Folder Collection
+
+```typescript
+{
+    "folder_name": String
 }
 ```

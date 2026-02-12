@@ -17,15 +17,32 @@ export interface CourseResponse extends CourseCreate {
 // Note interfaces
 export interface NoteCreate {
   notes: string;
+  folder_id?: string;
 }
 
 export interface NoteUpdate {
   notes?: string;
+  folder_id?: string;
 }
 
 export interface NoteResponse {
   id: string;
   notes: string;
+  folder_id?: string;
+}
+
+// Folder interfaces
+export interface FolderCreate {
+  folder_name: string;
+}
+
+export interface FolderUpdate {
+  folder_name?: string;
+}
+
+export interface FolderResponse {
+  id: string;
+  folder_name: string;
 }
 
 // Agent chat interfaces
@@ -143,6 +160,35 @@ class ApiService {
   async deleteNote(noteId: string): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/api/notes/${noteId}`, {
       method: "DELETE",
+    });
+  }
+
+  // Folder API methods
+  async getFolders(): Promise<FolderResponse[]> {
+    return this.request<FolderResponse[]>('/api/folders');
+  }
+
+  async getFolder(folderId: string): Promise<FolderResponse> {
+    return this.request<FolderResponse>(`/api/folders/${folderId}`);
+  }
+
+  async createFolder(folder: FolderCreate): Promise<FolderResponse> {
+    return this.request<FolderResponse>('/api/folders', {
+      method: 'POST',
+      body: JSON.stringify(folder),
+    });
+  }
+
+  async updateFolder(folderId: string, folder: FolderUpdate): Promise<FolderResponse> {
+    return this.request<FolderResponse>(`/api/folders/${folderId}`, {
+      method: 'PUT',
+      body: JSON.stringify(folder),
+    });
+  }
+
+  async deleteFolder(folderId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/folders/${folderId}`, {
+      method: 'DELETE',
     });
   }
 
