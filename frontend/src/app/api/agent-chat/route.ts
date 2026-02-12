@@ -51,7 +51,14 @@ export async function POST(request: NextRequest) {
     }
     
     const data = await response.json();
-    return NextResponse.json(data);
+    
+    // Extract the message from the response - it's at data.response.message
+    if (data.response && data.response.message) {
+      return NextResponse.json({ message: data.response.message });
+    }
+    
+    // Fallback: return the whole data if message not found
+    return NextResponse.json({ message: JSON.stringify(data) });
     
   } catch (error) {
     console.error('Server error:', error);
