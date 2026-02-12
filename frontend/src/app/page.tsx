@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { apiService, Course, NoteResponse } from "@/services/api";
+import AgentChat from "@/components/AgentChat";
 
 type TabType = "slides" | "upload" | "addCourse" | "notes";
 
@@ -671,18 +672,8 @@ export default function Home() {
       </div>
 
       {/* Right Toggle Bar - Agent Chat Interface */}
-      <div className="w-80 bg-gray-900 border-l border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-700 gradient-cool">
-          <h3 className="text-lg font-semibold text-white">Agent Chat</h3>
-        </div>
-        <div className="flex-1 p-4">
-          <div className="h-full flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <div className="text-4xl mb-2">💬</div>
-              <div className="text-gray-400">Chat interface will be implemented here</div>
-            </div>
-          </div>
-        </div>
+      <div className="w-80 bg-gray-900 border-l border-gray-700">
+        <AgentChat />
       </div>
     </div>
   );

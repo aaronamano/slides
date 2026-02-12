@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = 'http://localhost:8000';
 
 export interface Course {
   id: string;
@@ -26,6 +26,18 @@ export interface NoteUpdate {
 export interface NoteResponse {
   id: string;
   notes: string;
+}
+
+// Agent chat interfaces
+export interface ConversationResponse {
+  // Response structure will depend on Elasticsearch agent builder API
+  [key: string]: any;
+}
+
+// For backwards compatibility in the chat component
+export interface Message {
+  role: string;
+  content: string;
 }
 
 class ApiService {
@@ -136,6 +148,15 @@ class ApiService {
 
   async getPdfBinary(documentId: string): Promise<{ document_id: string; filename: string; pdf_binary: string; pdf_size: number; title: string }> {
     return this.request(`/api/pdf/${documentId}`);
+  }
+
+  // Agent chat API methods - call via Next.js API route to avoid CORS
+  async sendAgentConversation(input: string): Promise<ConversationResponse> {
+    
+    return this.request<ConversationResponse>('/api/agent-chat', {
+      method: 'POST',
+      body: JSON.stringify({ input }),
+    });
   }
 }
 
