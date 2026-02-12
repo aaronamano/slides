@@ -241,6 +241,23 @@ export default function Home() {
     }
   };
 
+  const handleDeleteSlide = async (documentId: string, courseId: string) => {
+    if (!confirm("Are you sure you want to delete this slide?")) {
+      return;
+    }
+
+    try {
+      setError(null);
+      setSuccess(null);
+      await apiService.deleteSlide(documentId);
+      setSuccess("Slide deleted successfully!");
+      // Refresh slides for the course
+      await fetchSlidesForCourse(courseId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete slide");
+    }
+  };
+
   const loadPdfBinary = async (slideId: string, documentId: string): Promise<string> => {
     if (pdfDataUrls[documentId]) {
       return pdfDataUrls[documentId];
@@ -385,8 +402,16 @@ export default function Home() {
                               <div className="px-8 py-4 bg-gray-800 border-t border-gray-700">
                                 <div className="flex items-center justify-between mb-4">
                                   <div className="text-sm text-gray-400">PDF Desktop View</div>
-                                  <div className="text-xs text-gray-500">
-                                    Filename: {slide.filename}
+                                  <div className="flex items-center space-x-3">
+                                    <div className="text-xs text-gray-500">
+                                      Filename: {slide.filename}
+                                    </div>
+                                    <button
+                                      onClick={() => handleDeleteSlide(slide.id, course.id)}
+                                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                    >
+                                      Delete
+                                    </button>
                                   </div>
                                 </div>
                                 

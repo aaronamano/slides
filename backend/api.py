@@ -285,6 +285,22 @@ async def delete_note(note_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/api/slides/{document_id}")
+async def delete_slide(document_id: str):
+    """Delete a lecture slide from Elasticsearch"""
+    try:
+        response = client.delete(index=index_name, id=document_id)
+        
+        if response.get('result') == 'not_found':
+            raise HTTPException(status_code=404, detail="Slide not found")
+        
+        return {"message": "Slide deleted successfully", "document_id": document_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete slide: {str(e)}")
+    
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="localhost", port=8000)

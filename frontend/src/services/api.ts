@@ -146,6 +146,12 @@ class ApiService {
     });
   }
 
+  async deleteSlide(documentId: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api/slides/${documentId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async getPdfBinary(documentId: string): Promise<{ document_id: string; filename: string; pdf_binary: string; pdf_size: number; title: string }> {
     return this.request(`/api/pdf/${documentId}`);
   }
