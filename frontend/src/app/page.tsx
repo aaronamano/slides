@@ -3,12 +3,40 @@
 import { useState, useEffect } from "react";
 import { apiService, Course, NoteResponse, FolderResponse } from "@/services/api";
 import AgentChat from "@/components/AgentChat";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 type TabType = "slides" | "upload" | "addCourse" | "notes";
+
+interface SlideData {
+  id: string;
+  title: string;
+  filename: string;
+  has_binary?: boolean;
+  text_content: string;
+}
 
 interface CourseWithSlides extends Course {
   slides?: { title: string; pdfUrl: string }[];
 }
+
+const colorTabs = [
+  { id: "slides" as TabType, label: "Slides", color: "#0B64DD" },
+  { id: "upload" as TabType, label: "Upload", color: "#BC1E70" },
+  { id: "addCourse" as TabType, label: "Add Course", color: "#008B87" },
+  { id: "notes" as TabType, label: "Notes", color: "#008A5E" }
+];
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>("slides");
@@ -18,12 +46,10 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // State for courses and their slides
   const [courses, setCourses] = useState<CourseWithSlides[]>([]);
-  const [slidesData, setSlidesData] = useState<{ [key: string]: any[] }>({});
+  const [slidesData, setSlidesData] = useState<{ [key: string]: SlideData[] }>({});
   const [pdfDataUrls, setPdfDataUrls] = useState<{ [key: string]: string }>({});
 
-  // Form states
   const [uploadForm, setUploadForm] = useState({
     title: "",
     courseId: "",
@@ -35,7 +61,6 @@ export default function Home() {
     name: ""
   });
 
-  // Notes state
   const [notes, setNotes] = useState<NoteResponse[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
   const [noteForm, setNoteForm] = useState({
@@ -44,9 +69,8 @@ export default function Home() {
   });
   const [editingNote, setEditingNote] = useState<string | null>(null);
 
-  // Folders state
   const [folders, setFolders] = useState<FolderResponse[]>([]);
-  const [foldersLoading, setFoldersLoading] = useState(false);
+  const [, setFoldersLoading] = useState(false);
   const [folderForm, setFolderForm] = useState({
     name: ""
   });
@@ -55,16 +79,10 @@ export default function Home() {
   const [selectedNote, setSelectedNote] = useState<NoteResponse | null>(null);
   const [showAddToFolder, setShowAddToFolder] = useState<string | null>(null);
 
-
-
-
-
-  // Fetch courses on component mount
   useEffect(() => {
     fetchCourses();
   }, []);
 
-  // Fetch notes when notes tab is activated
   useEffect(() => {
     if (activeTab === "notes") {
       fetchNotes();
@@ -91,10 +109,10 @@ export default function Home() {
 
   const fetchSlidesForCourse = async (courseId: string) => {
     try {
-      const slides = await apiService.getSlidesByCourse(courseId);
+      const slides = await apiService.getSlidesByCourse(courseId) as { slides?: SlideData[] };
       setSlidesData(prev => ({
         ...prev,
-        [courseId]: (slides as any).slides || []
+        [courseId]: slides.slides || []
       }));
     } catch (err) {
       console.error(`Failed to fetch slides for course ${courseId}:`, err);
@@ -111,7 +129,6 @@ export default function Home() {
       newExpanded.delete(courseId);
     } else {
       newExpanded.add(courseId);
-      // Fetch slides when expanding course
       if (!slidesData[courseId]) {
         await fetchSlidesForCourse(courseId);
       }
@@ -128,7 +145,6 @@ export default function Home() {
     } else {
       newExpanded.add(slideKey);
       
-      // Load PDF binary data if available and not already loaded
       if (hasBinary && !pdfDataUrls[documentId]) {
         try {
           await loadPdfBinary(slideId, documentId);
@@ -157,7 +173,7 @@ export default function Home() {
       
       setSuccess("Course added successfully!");
       setCourseForm({ id: "", name: "" });
-      await fetchCourses(); // Refresh courses list
+      await fetchCourses();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create course");
     }
@@ -181,7 +197,6 @@ export default function Home() {
       
       setSuccess("Slide uploaded successfully!");
       setUploadForm({ title: "", courseId: "", pdfFile: null });
-      // Refresh slides if the course is expanded
       if (expandedCourses.has(uploadForm.courseId)) {
         await fetchSlidesForCourse(uploadForm.courseId);
       }
@@ -217,7 +232,7 @@ export default function Home() {
       });
       setSuccess("Note created successfully!");
       setNoteForm({ notes: "", folder_id: "" });
-      await fetchNotes(); // Refresh notes list
+      await fetchNotes();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create note");
     }
@@ -235,7 +250,7 @@ export default function Home() {
       await apiService.updateNote(noteId, { notes: updatedNotes });
       setSuccess("Note updated successfully!");
       setEditingNote(null);
-      await fetchNotes(); // Refresh notes list
+      await fetchNotes();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update note");
     }
@@ -251,7 +266,7 @@ export default function Home() {
       setSuccess(null);
       await apiService.deleteNote(noteId);
       setSuccess("Note deleted successfully!");
-      await fetchNotes(); // Refresh notes list
+      await fetchNotes();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete note");
     }
@@ -360,7 +375,6 @@ export default function Home() {
       setSuccess(null);
       await apiService.deleteSlide(documentId);
       setSuccess("Slide deleted successfully!");
-      // Refresh slides for the course
       await fetchSlidesForCourse(courseId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete slide");
@@ -376,7 +390,6 @@ export default function Home() {
       const pdfData = await apiService.getPdfBinary(documentId);
       const base64Content = pdfData.pdf_binary;
       
-      // Convert base64 to blob and create object URL
       const binaryString = atob(base64Content);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -386,7 +399,6 @@ export default function Home() {
       const blob = new Blob([bytes], { type: 'application/pdf' });
       const objectUrl = URL.createObjectURL(blob);
       
-      // Cache the URL
       setPdfDataUrls(prev => ({
         ...prev,
         [documentId]: objectUrl
@@ -399,54 +411,61 @@ export default function Home() {
     }
   };
 
-
-
-
-
-  const leftTabs = [
-    { id: "slides" as TabType, label: "Slides" },
-    { id: "upload" as TabType, label: "Upload" },
-    { id: "addCourse" as TabType, label: "Add Course" },
-    { id: "notes" as TabType, label: "Notes" }
-  ];
+  const getTabColor = (tabId: TabType) => {
+    const tab = colorTabs.find(t => t.id === tabId);
+    return tab?.color || "#0B64DD";
+  };
 
   if (loading && courses.length === 0) {
     return (
-      <div className="flex h-screen bg-black items-center justify-center">
+      <div className="flex h-screen bg-background items-center justify-center">
         <div className="text-center">
-          <div className="text-xl text-gray-300">Loading...</div>
+          <div className="text-xl text-muted-foreground">Loading...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-black">
-      {/* Left Toggle Bar */}
-      <div className="w-40 bg-gray-900 border-r border-gray-700 flex flex-col items-center py-4 space-y-3">
-        {leftTabs.map((tab) => (
+    <div className="flex h-screen bg-background">
+      <div 
+        className="w-44 flex flex-col items-center py-6 space-y-3 border-r"
+        style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
+      >
+        <div className="text-lg font-bold mb-4" style={{ color: getTabColor(activeTab) }}>
+          SlideES
+        </div>
+        {colorTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`w-32 h-12 rounded-lg flex items-center justify-center transition-all ${
+            className={`w-36 h-12 rounded-xl flex items-center justify-center transition-all font-medium ${
               activeTab === tab.id
-                ? "gradient-primary text-white shadow-lg shadow-blue-500/25"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                ? "shadow-lg"
+                : "hover:bg-muted/50"
             }`}
+            style={{
+              backgroundColor: activeTab === tab.id ? tab.color : "transparent",
+              color: activeTab === tab.id ? "white" : "oklch(0.7 0 0)",
+              boxShadow: activeTab === tab.id ? `0 4px 20px ${tab.color}40` : "none",
+            }}
           >
-            <span className="text-sm font-medium">{tab.label}</span>
+            <span className="text-sm">{tab.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 p-6 overflow-auto">
         {error && (
-          <div className="mb-4 p-4 bg-red-900/30 border border-red-700 text-red-300 rounded-lg flex items-center justify-between">
-            <span>{error}</span>
+          <div 
+            className="mb-4 p-4 rounded-lg flex items-center justify-between"
+            style={{ backgroundColor: "#C61E2540", border: "1px solid #C61E25" }}
+          >
+            <span style={{ color: "#FF6B6B" }}>{error}</span>
             <button
               onClick={() => setError(null)}
-              className="ml-4 text-red-400 hover:text-red-200 text-xl"
+              className="ml-4 text-xl hover:opacity-80"
+              style={{ color: "#FF6B6B" }}
             >
               ×
             </button>
@@ -454,11 +473,15 @@ export default function Home() {
         )}
         
         {success && (
-          <div className="mb-4 p-4 bg-green-900/30 border border-green-700 text-green-300 rounded-lg flex items-center justify-between">
-            <span>{success}</span>
+          <div 
+            className="mb-4 p-4 rounded-lg flex items-center justify-between"
+            style={{ backgroundColor: "#008A5E40", border: "1px solid #008A5E" }}
+          >
+            <span style={{ color: "#4ADE80" }}>{success}</span>
             <button
               onClick={() => setSuccess(null)}
-              className="ml-4 text-green-400 hover:text-green-200 text-xl"
+              className="ml-4 text-xl hover:opacity-80"
+              style={{ color: "#4ADE80" }}
             >
               ×
             </button>
@@ -467,155 +490,175 @@ export default function Home() {
 
         {activeTab === "slides" && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white mb-4">Slides</h2>
+            <h2 className="text-2xl font-bold" style={{ color: "oklch(0.985 0 0)" }}>Slides</h2>
             {courses.length === 0 ? (
-              <div className="bg-gray-900 rounded-lg border border-gray-700 p-8 text-center">
-                <div className="text-gray-400">No courses found. Add a course to get started.</div>
-              </div>
+              <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
+                <CardContent className="pt-6 text-center">
+                  <div className="text-muted-foreground">No courses found. Add a course to get started.</div>
+                </CardContent>
+              </Card>
             ) : (
               courses.map((course) => (
-                <div key={course.id} className="bg-gray-900 rounded-lg border border-gray-700">
-                  <button
+                <Card key={course.id} style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
+                  <CardHeader 
+                    className="cursor-pointer hover:bg-muted/30 transition-colors"
                     onClick={() => toggleCourse(course.id)}
-                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-800 transition-colors"
                   >
-                    <div className="text-left">
-                      <div className="font-semibold text-white">{course.name}</div>
-                      <div className="text-sm text-gray-400">ID: {course.id}</div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle style={{ color: "oklch(0.985 0 0)" }}>{course.name}</CardTitle>
+                        <CardDescription className="text-muted-foreground">ID: {course.id}</CardDescription>
+                      </div>
+                      <Badge style={{ backgroundColor: "#008B87", color: "white" }}>
+                        {slidesData[course.id]?.length || 0} slides
+                      </Badge>
                     </div>
-                    <span className="text-gray-500">
-                      {expandedCourses.has(course.id) ? "▼" : "▶"}
-                    </span>
-                  </button>
+                  </CardHeader>
                   
                   {expandedCourses.has(course.id) && slidesData[course.id] && (
-                    <div className="border-t border-gray-700">
-                      {slidesData[course.id].length === 0 ? (
-                        <div className="px-8 py-4 text-gray-400 text-sm">
-                          No slides found for this course.
-                        </div>
-                      ) : (
-                        slidesData[course.id].map((slide: any, index: number) => (
-                          <div key={slide.id || index} className="border-b border-gray-800 last:border-b-0">
-                            <button
-                              onClick={() => toggleSlide(`${course.id}-${slide.id || index}`, slide.id, slide.has_binary || false)}
-                              className="w-full px-8 py-2 flex items-center justify-between hover:bg-gray-800 transition-colors"
-                            >
-                              <span className="text-sm text-gray-300">{slide.title}</span>
-                              <span className="text-gray-500">
-                                {expandedSlides.has(`${course.id}-${slide.id || index}`) ? "▼" : "▶"}
-                              </span>
-                            </button>
-                            
-                            {expandedSlides.has(`${course.id}-${slide.id || index}`) && (
-                              <div className="px-8 py-4 bg-gray-800 border-t border-gray-700">
-                                <div className="flex items-center justify-between mb-4">
-                                  <div className="text-sm text-gray-400">PDF Desktop View</div>
-                                  <div className="flex items-center space-x-3">
-                                    <div className="text-xs text-gray-500">
-                                      Filename: {slide.filename}
-                                    </div>
-                                    <button
-                                      onClick={() => handleDeleteSlide(slide.id, course.id)}
-                                      className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition-colors text-sm"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </div>
+                    <>
+                      <Separator />
+                      <CardContent className="pt-4">
+                        {slidesData[course.id].length === 0 ? (
+                          <div className="text-muted-foreground text-sm py-4">
+                            No slides found for this course.
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {slidesData[course.id].map((slide: SlideData, index: number) => (
+                              <div 
+                                key={slide.id || index} 
+                                className="rounded-lg border overflow-hidden"
+                                style={{ borderColor: "oklch(1 0 0 / 10%)" }}
+                              >
+                                <button
+                                  onClick={() => toggleSlide(`${course.id}-${slide.id || index}`, slide.id, slide.has_binary || false)}
+                                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-muted/30 transition-colors"
+                                >
+                                  <span className="text-sm" style={{ color: "oklch(0.9 0 0)" }}>{slide.title}</span>
+                                  <span className="text-muted-foreground text-xs">
+                                    {expandedSlides.has(`${course.id}-${slide.id || index}`) ? "▼" : "▶"}
+                                  </span>
+                                </button>
                                 
-                                <div className="bg-gray-900 border border-gray-600 rounded-lg overflow-hidden">
-                                  <div className="h-96">
-                                    {(slide.has_binary && pdfDataUrls[slide.id]) ? (
-                                      <iframe
-                                        src={pdfDataUrls[slide.id]}
-                                        className="w-full h-full rounded-lg"
-                                        title={slide.title}
-                                        onError={(e) => {
-                                          const target = e.target as HTMLIFrameElement;
-                                          target.style.display = 'none';
-                                          const errorDiv = target.parentElement?.querySelector('.pdf-error');
-                                          if (errorDiv) {
-                                            (errorDiv as HTMLElement).style.display = 'flex';
-                                          }
-                                        }}
-                                      />
-                                    ) : slide.has_binary ? (
-                                      <div className="flex items-center justify-center h-full text-gray-400">
-                                        <div className="text-center">
-                                          <div className="text-lg mb-2">Loading PDF...</div>
-                                          <div className="text-sm">Retrieving PDF from database</div>
+                                {expandedSlides.has(`${course.id}-${slide.id || index}`) && (
+                                  <div className="p-4 border-t" style={{ borderColor: "oklch(1 0 0 / 10%)", backgroundColor: "oklch(0.1 0 0)" }}>
+                                    <div className="flex items-center justify-between mb-4">
+                                      <div className="text-sm text-muted-foreground">PDF Desktop View</div>
+                                      <div className="flex items-center space-x-3">
+                                        <div className="text-xs text-muted-foreground">
+                                          Filename: {slide.filename}
                                         </div>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => handleDeleteSlide(slide.id, course.id)}
+                                          style={{ backgroundColor: "#C61E25" }}
+                                        >
+                                          Delete
+                                        </Button>
                                       </div>
-                                    ) : (
-                                      <iframe
-                                        src={`http://localhost:8001/api/files/${slide.filename}`}
-                                        className="w-full h-full rounded-lg"
-                                        title={slide.title}
-                                        onError={(e) => {
-                                          const target = e.target as HTMLIFrameElement;
-                                          target.style.display = 'none';
-                                          const errorDiv = target.parentElement?.querySelector('.pdf-error');
-                                          if (errorDiv) {
-                                            (errorDiv as HTMLElement).style.display = 'flex';
-                                          }
-                                        }}
-                                      />
-                                    )}
+                                    </div>
                                     
-                                    <div className="pdf-error hidden items-center justify-center h-full text-gray-400 bg-gray-800 rounded-lg">
-                                      <div className="text-center p-4">
-                                        <div className="text-lg mb-2">PDF Not Available</div>
-                                        <div className="text-sm mb-4">The original PDF file is not accessible</div>
-                                        <div className="bg-gray-900 border border-gray-600 rounded-lg p-4 max-h-64 overflow-auto text-left">
-                                          <div className="text-sm text-gray-300 font-mono whitespace-pre-wrap">
-                                            {slide.text_content.substring(0, 500)}
-                                            {slide.text_content.length > 500 ? '...' : ''}
+                                    <div 
+                                      className="rounded-lg overflow-hidden border"
+                                      style={{ borderColor: "oklch(1 0 0 / 10%)" }}
+                                    >
+                                      <div className="h-96">
+                                        {(slide.has_binary && pdfDataUrls[slide.id]) ? (
+                                          <iframe
+                                            src={pdfDataUrls[slide.id]}
+                                            className="w-full h-full"
+                                            title={slide.title}
+                                            onError={(e) => {
+                                              const target = e.target as HTMLIFrameElement;
+                                              target.style.display = 'none';
+                                              const errorDiv = target.parentElement?.querySelector('.pdf-error');
+                                              if (errorDiv) {
+                                                (errorDiv as HTMLElement).style.display = 'flex';
+                                              }
+                                            }}
+                                          />
+                                        ) : slide.has_binary ? (
+                                          <div className="flex items-center justify-center h-full text-muted-foreground">
+                                            <div className="text-center">
+                                              <div className="text-lg mb-2">Loading PDF...</div>
+                                              <div className="text-sm">Retrieving PDF from database</div>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <iframe
+                                            src={`http://localhost:8001/api/files/${slide.filename}`}
+                                            className="w-full h-full"
+                                            title={slide.title}
+                                            onError={(e) => {
+                                              const target = e.target as HTMLIFrameElement;
+                                              target.style.display = 'none';
+                                              const errorDiv = target.parentElement?.querySelector('.pdf-error');
+                                              if (errorDiv) {
+                                                (errorDiv as HTMLElement).style.display = 'flex';
+                                              }
+                                            }}
+                                          />
+                                        )}
+                                        
+                                        <div className="pdf-error hidden items-center justify-center h-full text-muted-foreground p-4" style={{ backgroundColor: "oklch(0.15 0 0)" }}>
+                                          <div className="text-center">
+                                            <div className="text-lg mb-2">PDF Not Available</div>
+                                            <div className="text-sm mb-4">The original PDF file is not accessible</div>
+                                            <div 
+                                              className="rounded-lg p-4 max-h-64 overflow-auto text-left border"
+                                              style={{ backgroundColor: "oklch(0.1 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
+                                            >
+                                              <div className="text-sm font-mono whitespace-pre-wrap" style={{ color: "oklch(0.9 0 0)" }}>
+                                                {slide.text_content.substring(0, 500)}
+                                                {slide.text_content.length > 500 ? '...' : ''}
+                                              </div>
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
+                                )}
                               </div>
-                            )}
+                            ))}
                           </div>
-                        ))
-                      )}
-                    </div>
+                        )}
+                      </CardContent>
+                    </>
                   )}
-                </div>
+                </Card>
               ))
             )}
           </div>
         )}
 
         {activeTab === "upload" && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">Upload Slide</h2>
-            <div className="bg-gray-900 rounded-lg border border-gray-700 p-6">
-              <div className="space-y-4">
+          <div className="space-y-4 max-w-xl">
+            <h2 className="text-2xl font-bold" style={{ color: "oklch(0.985 0 0)" }}>Upload Slide</h2>
+            <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
+              <CardContent className="pt-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
                     Title
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={uploadForm.title}
                     onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Enter slide title"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
                     Course
                   </label>
                   <select
                     value={uploadForm.courseId}
                     onChange={(e) => setUploadForm({ ...uploadForm, courseId: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 rounded-md border bg-background text-foreground"
+                    style={{ borderColor: "oklch(1 0 0 / 15%)" }}
                   >
                     <option value="">Select a course</option>
                     {courses.map((course) => (
@@ -627,7 +670,7 @@ export default function Home() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
                     PDF File
                   </label>
                   <div className="flex items-center space-x-3">
@@ -640,259 +683,264 @@ export default function Home() {
                     />
                     <label
                       htmlFor="pdf-file-input"
-                      className="px-4 py-2 bg-linear-to-r from-blue-500 to-purple-600 text-white text-sm font-medium rounded-full cursor-pointer hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                      className="px-4 py-2 rounded-full text-sm font-medium cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg"
+                      style={{ 
+                        background: "linear-gradient(135deg, #BC1E70, #0B64DD)", 
+                        color: "white" 
+                      }}
                     >
                       Choose File
                     </label>
-                    <span className="text-sm text-gray-400">
+                    <span className="text-sm text-muted-foreground">
                       {uploadForm.pdfFile ? uploadForm.pdfFile.name : "No file selected"}
                     </span>
                   </div>
                 </div>
                 
-                <button
+                <Button
                   onClick={handleUpload}
                   disabled={!uploadForm.title || !uploadForm.courseId || !uploadForm.pdfFile}
-                  className="w-full gradient-primary text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:bg-gray-700 disabled:cursor-not-allowed disabled:hover:opacity-100"
+                  className="w-full"
+                  style={{ backgroundColor: "#BC1E70" }}
                 >
                   Upload Slide
-                </button>
-              </div>
-            </div>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {activeTab === "addCourse" && (
-          <div className="space-y-4">
-            <h2 className="text-2xl font-bold text-white">Add New Course</h2>
-            <div className="bg-gray-900 rounded-lg border border-gray-700 p-6">
-              <div className="space-y-4">
+          <div className="space-y-4 max-w-xl">
+            <h2 className="text-2xl font-bold" style={{ color: "oklch(0.985 0 0)" }}>Add New Course</h2>
+            <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
+              <CardContent className="pt-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
                     Course ID
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={courseForm.id}
                     onChange={(e) => setCourseForm({ ...courseForm, id: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., CS101"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
                     Course Name
                   </label>
-                  <input
+                  <Input
                     type="text"
                     value={courseForm.name}
                     onChange={(e) => setCourseForm({ ...courseForm, name: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="e.g., Introduction to Computer Science"
                   />
                 </div>
                 
-                <button
+                <Button
                   onClick={handleAddCourse}
                   disabled={!courseForm.id || !courseForm.name}
-                  className="w-full gradient-secondary text-white py-2 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:bg-gray-700 disabled:cursor-not-allowed disabled:hover:opacity-100"
+                  className="w-full"
+                  style={{ backgroundColor: "#008B87" }}
                 >
                   Add Course
-                </button>
-              </div>
-            </div>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {activeTab === "notes" && (
-          <div className="flex h-full">
-            {/* Sidebar - Folders and Notes */}
-            <div className="w-64 border-r border-gray-700 pr-4 overflow-auto">
-              <div className="mb-4">
-                <h2 className="text-xl font-bold text-white mb-4">Notes</h2>
-                
-                {/* Create New Folder */}
-                <div className="flex items-center space-x-2 mb-2">
-                  <input
-                    type="text"
-                    value={folderForm.name}
-                    onChange={(e) => setFolderForm({ ...folderForm, name: e.target.value })}
-                    className="flex-1 px-2 py-1 bg-gray-800 border border-gray-600 text-white text-sm rounded focus:ring-1 focus:ring-blue-500"
-                    placeholder="New folder..."
-                    onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
-                  />
-                  <button
-                    onClick={handleCreateFolder}
-                    disabled={!folderForm.name.trim()}
-                    className="text-gray-400 hover:text-white disabled:opacity-50"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                </div>
+          <div className="flex h-full gap-4">
+            <div className="w-72 flex-shrink-0">
+              <h2 className="text-xl font-bold mb-4" style={{ color: "oklch(0.985 0 0)" }}>Notes</h2>
+              
+              <div className="flex items-center space-x-2 mb-4">
+                <Input
+                  type="text"
+                  value={folderForm.name}
+                  onChange={(e) => setFolderForm({ ...folderForm, name: e.target.value })}
+                  placeholder="New folder..."
+                  onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+                />
+                <Button
+                  size="icon"
+                  onClick={handleCreateFolder}
+                  disabled={!folderForm.name.trim()}
+                  style={{ backgroundColor: "#008A5E" }}
+                >
+                  +
+                </Button>
+              </div>
 
-                {/* Unassigned Notes */}
-                <div className="mb-2">
+              <ScrollArea className="h-[calc(100vh-200px)]">
+                <div className="space-y-1">
                   <button
                     onClick={() => { setSelectedNote(null); setExpandedFolders(new Set()); }}
-                    className={`w-full flex items-center space-x-2 px-2 py-1 rounded text-sm text-left ${
+                    className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
                       !selectedNote && expandedFolders.size === 0 
-                        ? "bg-gray-700 text-white" 
-                        : "text-gray-400 hover:bg-gray-800"
+                        ? "bg-muted" 
+                        : "hover:bg-muted/50"
                     }`}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <span>All Notes</span>
-                    <span className="ml-auto text-xs text-gray-500">{notes.filter(n => !n.folder_id).length}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{notes.filter(n => !n.folder_id).length}</span>
                   </button>
-                </div>
 
-                {/* Folders */}
-                {folders.map((folder) => {
-                  const folderNotes = notes.filter(n => n.folder_id === folder.id);
-                  const isExpanded = expandedFolders.has(folder.id);
-                  
-                  return (
-                    <div key={folder.id} className="mb-1">
-                      {editingFolder === folder.id ? (
-                        <div className="flex items-center space-x-1 px-2">
-                          <input
-                            type="text"
-                            defaultValue={folder.folder_name}
-                            className="flex-1 px-2 py-1 bg-gray-700 border border-gray-600 text-white text-sm rounded"
-                            id={`edit-folder-${folder.id}`}
-                            onKeyPress={(e) => e.key === 'Enter' && handleUpdateFolder(folder.id, (e.target as HTMLInputElement).value)}
-                          />
-                          <button
-                            onClick={() => {
-                              const input = document.getElementById(`edit-folder-${folder.id}`) as HTMLInputElement;
-                              handleUpdateFolder(folder.id, input.value);
-                            }}
-                            className="text-green-500 hover:text-green-400"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            onClick={() => setEditingFolder(null)}
-                            className="text-gray-500 hover:text-gray-400"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="flex items-center group">
-                            <button
-                              onClick={() => toggleFolder(folder.id)}
-                              className="flex-1 flex items-center space-x-2 px-2 py-1 rounded text-sm text-left text-gray-300 hover:bg-gray-800"
+                  {folders.map((folder) => {
+                    const folderNotes = notes.filter(n => n.folder_id === folder.id);
+                    const isExpanded = expandedFolders.has(folder.id);
+                    
+                    return (
+                      <div key={folder.id}>
+                        {editingFolder === folder.id ? (
+                          <div className="flex items-center space-x-1 px-2">
+                            <Input
+                              type="text"
+                              defaultValue={folder.folder_name}
+                              className="h-8"
+                              id={`edit-folder-${folder.id}`}
+                              onKeyPress={(e) => e.key === 'Enter' && handleUpdateFolder(folder.id, (e.target as HTMLInputElement).value)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                const input = document.getElementById(`edit-folder-${folder.id}`) as HTMLInputElement;
+                                handleUpdateFolder(folder.id, input.value);
+                              }}
                             >
-                              <svg className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                              </svg>
-                              <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-                              </svg>
-                              <span className="truncate">{folder.folder_name}</span>
-                              <span className="ml-auto text-xs text-gray-500">{folderNotes.length}</span>
-                            </button>
-                            <div className="hidden group-hover:flex items-center">
-                              <button
-                                onClick={() => setShowAddToFolder(folder.id)}
-                                className="p-1 text-gray-500 hover:text-white"
-                                title="Add existing note"
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => setEditingFolder(folder.id)}
-                                className="p-1 text-gray-500 hover:text-white"
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteFolder(folder.id)}
-                                className="p-1 text-gray-500 hover:text-red-500"
-                              >
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
+                              ✓
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingFolder(null)}
+                            >
+                              ✕
+                            </Button>
                           </div>
-                          
-                          {/* Notes under folder - Notion style */}
-                          {isExpanded && (
-                            <div className="ml-6 space-y-1">
-                              {folderNotes.length === 0 ? (
-                                <div className="text-xs text-gray-500 px-2 py-1">No pages</div>
-                              ) : (
-                                folderNotes.map((note) => (
-                                  <button
-                                    key={note.id}
-                                    onClick={() => setSelectedNote(note)}
-                                    className={`w-full flex items-center space-x-2 px-2 py-1 rounded text-sm text-left ${
-                                      selectedNote?.id === note.id
-                                        ? "bg-blue-600 text-white"
-                                        : "text-gray-400 hover:bg-gray-800"
-                                    }`}
-                                  >
-                                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <span className="truncate">{note.notes.substring(0, 30)}{note.notes.length > 30 ? '...' : ''}</span>
-                                  </button>
-                                ))
-                              )}
+                        ) : (
+                          <div>
+                            <div className="flex items-center group">
+                              <button
+                                onClick={() => toggleFolder(folder.id)}
+                                className="flex-1 flex items-center space-x-2 px-3 py-2 rounded-lg text-sm text-left hover:bg-muted/50 transition-colors"
+                                style={{ color: "oklch(0.9 0 0)" }}
+                              >
+                                <svg className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                                </svg>
+                                <svg className="w-4 h-4" style={{ color: "#FACB3D" }} fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                </svg>
+                                <span className="truncate">{folder.folder_name}</span>
+                                <span className="ml-auto text-xs text-muted-foreground">{folderNotes.length}</span>
+                              </button>
+                              <div className="hidden group-hover:flex items-center">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setShowAddToFolder(folder.id)}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                  </svg>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingFolder(folder.id)}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDeleteFolder(folder.id)}
+                                  style={{ color: "#C61E25" }}
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </Button>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                            
+                            {isExpanded && (
+                              <div className="ml-6 space-y-1">
+                                {folderNotes.length === 0 ? (
+                                  <div className="text-xs text-muted-foreground px-3 py-1">No pages</div>
+                                ) : (
+                                  folderNotes.map((note) => (
+                                    <button
+                                      key={note.id}
+                                      onClick={() => setSelectedNote(note)}
+                                      className={`w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
+                                        selectedNote?.id === note.id
+                                          ? "bg-primary text-primary-foreground"
+                                          : "hover:bg-muted/50"
+                                      }`}
+                                    >
+                                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                      </svg>
+                                      <span className="truncate">{note.notes.substring(0, 30)}{note.notes.length > 30 ? '...' : ''}</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
 
-            {/* Main Content - Note View or Create */}
-            <div className="flex-1 pl-4 overflow-auto">
+            <div className="flex-1">
               {selectedNote ? (
-                /* Note Page View */
                 <div className="h-full">
                   <div className="flex items-center justify-between mb-4">
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => setSelectedNote(null)}
-                      className="text-gray-400 hover:text-white flex items-center space-x-1"
+                      className="text-muted-foreground"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                       </svg>
-                      <span>Back</span>
-                    </button>
+                      Back
+                    </Button>
                     <div className="flex items-center space-x-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setEditingNote(selectedNote.id)}
-                        className="text-gray-400 hover:text-white"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                         </svg>
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDeleteNote(selectedNote.id)}
-                        className="text-gray-400 hover:text-red-500"
+                        style={{ color: "#C61E25" }}
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                      </button>
+                      </Button>
                     </div>
                   </div>
                   
@@ -900,102 +948,112 @@ export default function Home() {
                     <div className="space-y-3">
                       <textarea
                         defaultValue={selectedNote.notes}
-                        className="w-full px-4 py-3 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 text-lg"
-                        rows={20}
+                        className="w-full px-4 py-3 rounded-lg border bg-background text-foreground text-lg min-h-[400px]"
+                        style={{ borderColor: "oklch(1 0 0 / 15%)" }}
                         id={`edit-note-${selectedNote.id}`}
                       />
                       <div className="flex space-x-2">
-                        <button
+                        <Button
                           onClick={() => {
                             const textarea = document.getElementById(`edit-note-${selectedNote.id}`) as HTMLTextAreaElement;
                             handleUpdateNote(selectedNote.id, textarea.value);
                           }}
-                          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                          style={{ backgroundColor: "#008A5E" }}
                         >
                           Save
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="outline"
                           onClick={() => setEditingNote(null)}
-                          className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ) : (
-                    <div className="bg-gray-900 rounded-lg border border-gray-700 p-6">
-                      <div className="prose prose-invert max-w-none">
-                        <p className="text-white whitespace-pre-wrap text-lg">{selectedNote.notes}</p>
-                      </div>
-                    </div>
+                    <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
+                      <CardContent className="pt-6">
+                        <p className="whitespace-pre-wrap text-lg" style={{ color: "oklch(0.985 0 0)" }}>{selectedNote.notes}</p>
+                      </CardContent>
+                    </Card>
                   )}
                 </div>
               ) : (
-                /* Create New Note */
-                <div className="max-w-2xl">
-                  <h3 className="text-lg font-semibold text-white mb-4">New Note</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Folder (Optional)
-                      </label>
-                      <select
-                        value={noteForm.folder_id}
-                        onChange={(e) => setNoteForm({ ...noteForm, folder_id: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
+                <div className="max-w-2xl space-y-6">
+                  <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
+                    <CardHeader>
+                      <CardTitle style={{ color: "oklch(0.985 0 0)" }}>New Note</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
+                          Folder (Optional)
+                        </label>
+                        <select
+                          value={noteForm.folder_id}
+                          onChange={(e) => setNoteForm({ ...noteForm, folder_id: e.target.value })}
+                          className="w-full px-3 py-2 rounded-md border bg-background text-foreground"
+                          style={{ borderColor: "oklch(1 0 0 / 15%)" }}
+                        >
+                          <option value="">No folder</option>
+                          {folders.map((folder) => (
+                            <option key={folder.id} value={folder.id}>
+                              {folder.folder_name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
+                          Note Content
+                        </label>
+                        <textarea
+                          value={noteForm.notes}
+                          onChange={(e) => setNoteForm({ ...noteForm, notes: e.target.value })}
+                          className="w-full px-3 py-2 rounded-md border bg-background text-foreground min-h-[200px]"
+                          style={{ borderColor: "oklch(1 0 0 / 15%)" }}
+                          placeholder="Start typing your note..."
+                        />
+                      </div>
+                      
+                      <Button
+                        onClick={handleCreateNote}
+                        disabled={!noteForm.notes.trim()}
+                        className="w-full"
+                        style={{ backgroundColor: "#0B64DD" }}
                       >
-                        <option value="">No folder</option>
-                        {folders.map((folder) => (
-                          <option key={folder.id} value={folder.id}>
-                            {folder.folder_name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Note Content
-                      </label>
-                      <textarea
-                        value={noteForm.notes}
-                        onChange={(e) => setNoteForm({ ...noteForm, notes: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500"
-                        rows={15}
-                        placeholder="Start typing your note..."
-                      />
-                    </div>
-                    
-                    <button
-                      onClick={handleCreateNote}
-                      disabled={!noteForm.notes.trim()}
-                      className="w-full gradient-accent text-white py-2 px-4 rounded-lg hover:opacity-90 disabled:bg-gray-700 disabled:cursor-not-allowed"
-                    >
-                      Create Note
-                    </button>
-                  </div>
+                        Create Note
+                      </Button>
+                    </CardContent>
+                  </Card>
 
-                  {/* Unassigned Notes */}
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold text-white mb-4">Unassigned Notes</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4" style={{ color: "oklch(0.985 0 0)" }}>Unassigned Notes</h3>
                     {notesLoading ? (
-                      <div className="text-gray-400">Loading...</div>
+                      <div className="text-muted-foreground">Loading...</div>
                     ) : notes.filter(n => !n.folder_id).length === 0 ? (
-                      <div className="text-gray-400">No unassigned notes</div>
+                      <div className="text-muted-foreground">No unassigned notes</div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-3">
                         {notes.filter(n => !n.folder_id).map((note) => (
-                          <button
-                            key={note.id}
+                          <Card 
+                            key={note.id} 
+                            className="cursor-pointer hover:bg-muted/50 transition-colors"
+                            style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
                             onClick={() => setSelectedNote(note)}
-                            className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-left hover:bg-gray-700 transition-colors"
                           >
-                            <div className="text-white text-sm font-medium mb-1 truncate">
-                              {note.notes.substring(0, 40)}{note.notes.length > 40 ? '...' : ''}
-                            </div>
-                            <div className="text-gray-500 text-xs truncate">
-                              {note.notes}
-                            </div>
-                          </button>
+                            <CardContent className="pt-4">
+                              <div 
+                                className="text-sm font-medium mb-1 truncate"
+                                style={{ color: "oklch(0.985 0 0)" }}
+                              >
+                                {note.notes.substring(0, 40)}{note.notes.length > 40 ? '...' : ''}
+                              </div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {note.notes}
+                              </div>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
                     )}
@@ -1006,39 +1064,48 @@ export default function Home() {
           </div>
         )}
 
-        {/* Add to Folder Modal */}
         {showAddToFolder && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 border border-gray-700 rounded-lg p-6 w-96">
-              <h3 className="text-lg font-semibold text-white mb-4">Add Note to Folder</h3>
-              <p className="text-gray-400 mb-4">Select a note to add to this folder:</p>
-              <div className="max-h-60 overflow-auto space-y-2 mb-4">
+          <Dialog open={true} onOpenChange={() => setShowAddToFolder(null)}>
+            <DialogContent style={{ backgroundColor: "oklch(0.15 0 0)" }}>
+              <DialogHeader>
+                <DialogTitle style={{ color: "oklch(0.985 0 0)" }}>Add Note to Folder</DialogTitle>
+                <DialogDescription className="text-muted-foreground">
+                  Select a note to add to this folder:
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-60 overflow-auto space-y-2 py-4">
                 {notes.filter(n => !n.folder_id || n.folder_id !== showAddToFolder).map((note) => (
                   <button
                     key={note.id}
                     onClick={() => handleAddNoteToFolder(note.id, showAddToFolder)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-left hover:bg-gray-700"
+                    className="w-full rounded-lg p-3 text-left transition-colors hover:bg-muted/50 border"
+                    style={{ borderColor: "oklch(1 0 0 / 10%)" }}
                   >
-                    <div className="text-white text-sm truncate">{note.notes.substring(0, 50)}{note.notes.length > 50 ? '...' : ''}</div>
+                    <div className="text-sm truncate" style={{ color: "oklch(0.985 0 0)" }}>
+                      {note.notes.substring(0, 50)}{note.notes.length > 50 ? '...' : ''}
+                    </div>
                   </button>
                 ))}
                 {notes.filter(n => !n.folder_id || n.folder_id !== showAddToFolder).length === 0 && (
-                  <div className="text-gray-500 text-center py-4">No notes available to add</div>
+                  <div className="text-muted-foreground text-center py-4">No notes available to add</div>
                 )}
               </div>
-              <button
+              <Button
+                variant="outline"
                 onClick={() => setShowAddToFolder(null)}
-                className="w-full bg-gray-700 text-white py-2 rounded-lg hover:bg-gray-600"
+                className="w-full"
               >
                 Cancel
-              </button>
-            </div>
-          </div>
+              </Button>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
 
-      {/* Right Toggle Bar - Agent Chat Interface */}
-      <div className="w-80 bg-gray-900 border-l border-gray-700">
+      <div 
+        className="w-80 border-l flex-shrink-0"
+        style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
+      >
         <AgentChat />
       </div>
     </div>

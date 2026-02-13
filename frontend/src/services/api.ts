@@ -47,8 +47,8 @@ export interface FolderResponse {
 
 // Agent chat interfaces
 export interface ConversationResponse {
-  // Response structure will depend on Elasticsearch agent builder API
-  [key: string]: any;
+  message?: string;
+  [key: string]: unknown;
 }
 
 // For backwards compatibility in the chat component

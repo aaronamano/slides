@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Message } from "@/services/api";
 import Markdown from "react-markdown";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -49,7 +52,6 @@ export default function AgentChat() {
 
       const data = await response.json();
       
-      // Extract message - the API now returns { message: "..." }
       let agentResponse = "";
       if (data.message) {
         agentResponse = data.message;
@@ -67,7 +69,6 @@ export default function AgentChat() {
       console.error('Agent chat error:', err);
       const errorMessage = err instanceof Error ? err.message : "Failed to send message";
       
-      // If it's a 401 error, show a more helpful message
       if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
         setError("Authentication failed. The agent service may be incorrectly configured.");
       } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
@@ -95,120 +96,139 @@ export default function AgentChat() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-700">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-lg font-semibold text-white">Agent Chat</h3>
-          <button
+    <div className="flex flex-col h-full" style={{ backgroundColor: "oklch(0.12 0 0)" }}>
+      <div className="p-4 border-b" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold" style={{ color: "#0B64DD" }}>Agent Chat</h3>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={clearChat}
-            className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
             Clear
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
-            <div className="text-center">
-              <div className="text-3xl mb-2">💬</div>
-              <div className="text-sm text-gray-400">Start a conversation with the agent</div>
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-3">
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground py-12">
+              <div className="text-center">
+                <div className="text-3xl mb-2">💬</div>
+                <div className="text-sm">Start a conversation with the agent</div>
+              </div>
             </div>
-          </div>
-        ) : (
-          messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
+          ) : (
+            messages.map((message, index) => (
               <div
-                className={`max-w-[95%] px-4 py-3 rounded-lg text-sm ${
-                  message.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-700 text-gray-200"
-                }`}
+                key={index}
+                className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
-                <div className="font-medium text-xs mb-1 opacity-70">
-                  {message.role === "user" ? "You" : "Agent"}
+                <div
+                  className={`max-w-[95%] px-4 py-3 rounded-lg text-sm ${
+                    message.role === "user"
+                      ? "text-white"
+                      : ""
+                  }`}
+                  style={{ 
+                    backgroundColor: message.role === "user" ? "#0B64DD" : "oklch(0.2 0 0)",
+                    color: message.role === "user" ? "white" : "oklch(0.9 0 0)"
+                  }}
+                >
+                  <div className="font-medium text-xs mb-1 opacity-70">
+                    {message.role === "user" ? "You" : "Agent"}
+                  </div>
+                  <div className="whitespace-pre-wrap wrap-break-word text-xs">
+                    {message.role === "assistant" ? (
+                      <Markdown
+                        components={{
+                          h1: ({children}) => <h1 className="text-sm font-bold mt-0 mb-1">{children}</h1>,
+                          h2: ({children}) => <h2 className="text-sm font-bold mt-2 mb-1">{children}</h2>,
+                          h3: ({children}) => <h3 className="text-sm font-semibold mt-2 mb-1">{children}</h3>,
+                          p: ({children}) => <p className="my-0 leading-snug">{children}</p>,
+                          ul: ({children}) => <ul className="my-0 pl-4">{children}</ul>,
+                          ol: ({children}) => <ol className="my-0 pl-4">{children}</ol>,
+                          li: ({children}) => <li className="my-0 leading-snug">{children}</li>,
+                          hr: () => <hr className="my-2" style={{ borderColor: "oklch(1 0 0 / 10%)" }} />,
+                          table: ({children}) => <table className="my-2 text-xs">{children}</table>,
+                          thead: ({children}) => <thead className="my-0">{children}</thead>,
+                          tbody: ({children}) => <tbody className="my-0">{children}</tbody>,
+                          tr: ({children}) => <tr className="my-0">{children}</tr>,
+                          th: ({children}) => <th className="border px-2 my-0 text-left" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>{children}</th>,
+                          td: ({children}) => <td className="border px-2 my-0" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>{children}</td>,
+                          strong: ({children}) => <strong className="font-semibold">{children}</strong>,
+                          em: ({children}) => <em className="italic">{children}</em>,
+                          code: ({children}) => <code className="px-1 rounded text-xs" style={{ backgroundColor: "oklch(0.25 0 0)" }}>{children}</code>,
+                        }}
+                      >{message.content}</Markdown>
+                    ) : (
+                      message.content
+                    )}
+                  </div>
                 </div>
-                <div className="whitespace-pre-wrap wrap-break-word text-xs">
-                  {message.role === "assistant" ? (
-                    <Markdown
-                      components={{
-                        h1: ({children}) => <h1 className="text-sm font-bold mt-0 mb-1">{children}</h1>,
-                        h2: ({children}) => <h2 className="text-sm font-bold mt-2 mb-1">{children}</h2>,
-                        h3: ({children}) => <h3 className="text-sm font-semibold mt-2 mb-1">{children}</h3>,
-                        p: ({children}) => <p className="my-0 leading-snug">{children}</p>,
-                        ul: ({children}) => <ul className="my-0 pl-4">{children}</ul>,
-                        ol: ({children}) => <ol className="my-0 pl-4">{children}</ol>,
-                        li: ({children}) => <li className="my-0 leading-snug">{children}</li>,
-                        hr: () => <hr className="my-2 border-gray-500" />,
-                        table: ({children}) => <table className="my-2 text-xs">{children}</table>,
-                        thead: ({children}) => <thead className="my-0">{children}</thead>,
-                        tbody: ({children}) => <tbody className="my-0">{children}</tbody>,
-                        tr: ({children}) => <tr className="my-0">{children}</tr>,
-                        th: ({children}) => <th className="border border-gray-500 px-2 my-0 text-left">{children}</th>,
-                        td: ({children}) => <td className="border border-gray-500 px-2 my-0">{children}</td>,
-                        strong: ({children}) => <strong className="font-semibold">{children}</strong>,
-                        em: ({children}) => <em className="italic">{children}</em>,
-                        code: ({children}) => <code className="bg-gray-600 px-1 rounded text-xs">{children}</code>,
-                      }}
-                    >{message.content}</Markdown>
-                  ) : (
-                    message.content
-                  )}
+              </div>
+            ))
+          )}
+          
+          {isLoading && (
+            <div className="flex justify-start">
+              <div 
+                className="px-3 py-2 rounded-lg"
+                style={{ backgroundColor: "oklch(0.2 0 0)" }}
+              >
+                <div className="flex items-center space-x-2">
+                  <div 
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{ backgroundColor: "#0B64DD" }}
+                  ></div>
+                  <div 
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{ backgroundColor: "#0B64DD", animationDelay: '0.1s' }}
+                  ></div>
+                  <div 
+                    className="w-2 h-2 rounded-full animate-bounce"
+                    style={{ backgroundColor: "#0B64DD", animationDelay: '0.2s' }}
+                  ></div>
                 </div>
               </div>
             </div>
-          ))
-        )}
-        
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-700 text-gray-200 px-3 py-2 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
+          )}
+          
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
 
-      {/* Error Display */}
       {error && (
-        <div className="p-3 border-t border-gray-700">
-          <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg p-2 text-xs">
+        <div className="p-3 border-t" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
+          <div 
+            className="rounded-lg p-2 text-xs"
+            style={{ backgroundColor: "#C61E2540", border: "1px solid #C61E25", color: "#FF6B6B" }}
+          >
             {error}
           </div>
         </div>
       )}
 
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-700">
+      <div className="p-4 border-t" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
         <div className="flex space-x-2">
-          <input
+          <Input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="Type your message..."
             disabled={isLoading}
-            className="flex-1 px-3 py-2 bg-gray-800 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            className="flex-1"
           />
-          <button
+          <Button
             onClick={handleSendMessage}
             disabled={!inputValue.trim() || isLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-700 disabled:cursor-not-allowed text-sm font-medium"
+            style={{ backgroundColor: "#0B64DD" }}
           >
             Send
-          </button>
+          </Button>
         </div>
       </div>
     </div>
