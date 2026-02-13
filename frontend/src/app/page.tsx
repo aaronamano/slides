@@ -592,11 +592,8 @@ export default function Home() {
                                 {expandedSlides.has(`${course.id}-${slide.id || index}`) && (
                                   <div className="p-4 border-t" style={{ borderColor: "oklch(1 0 0 / 10%)", backgroundColor: "oklch(0.1 0 0)" }}>
                                     <div className="flex items-center justify-between mb-4">
-                                      <div className="text-sm text-muted-foreground">PDF Desktop View</div>
+                                      <div className="text-sm text-muted-foreground">{slide.filename}</div>
                                       <div className="flex items-center space-x-3">
-                                        <div className="text-xs text-muted-foreground">
-                                          Filename: {slide.filename}
-                                        </div>
                                         <Button
                                           size="sm"
                                           onClick={() => handleDeleteSlide(slide.id, course.id)}
