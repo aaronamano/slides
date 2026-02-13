@@ -67,12 +67,14 @@ export default function Home() {
   const [notes, setNotes] = useState<NoteResponse[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
   const [noteForm, setNoteForm] = useState({
+    title: "",
     notes: "",
     folder_id: ""
   });
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [notePreview, setNotePreview] = useState(false);
   const [editNoteMarkdown, setEditNoteMarkdown] = useState("");
+  const [editNoteTitle, setEditNoteTitle] = useState("");
 
   const [folders, setFolders] = useState<FolderResponse[]>([]);
   const [, setFoldersLoading] = useState(false);
@@ -223,6 +225,10 @@ export default function Home() {
   };
 
   const handleCreateNote = async () => {
+    if (!noteForm.title.trim()) {
+      setError("Please enter a title");
+      return;
+    }
     if (!noteForm.notes.trim()) {
       setError("Please enter note content");
       return;
@@ -232,11 +238,12 @@ export default function Home() {
       setError(null);
       setSuccess(null);
       await apiService.createNote({ 
+        title: noteForm.title,
         notes: noteForm.notes,
         folder_id: noteForm.folder_id || undefined
       });
       setSuccess("Note created successfully!");
-      setNoteForm({ notes: "", folder_id: "" });
+      setNoteForm({ title: "", notes: "", folder_id: "" });
       setNotePreview(false);
       await fetchNotes();
     } catch (err) {
@@ -244,16 +251,20 @@ export default function Home() {
     }
   };
 
-  const handleUpdateNote = async (noteId: string, updatedNotes: string) => {
+  const handleUpdateNote = async (noteId: string, updatedNotes: string, updatedTitle?: string) => {
     if (!updatedNotes.trim()) {
       setError("Note content cannot be empty");
+      return;
+    }
+    if (!updatedTitle?.trim()) {
+      setError("Note title cannot be empty");
       return;
     }
 
     try {
       setError(null);
       setSuccess(null);
-      await apiService.updateNote(noteId, { notes: updatedNotes });
+      await apiService.updateNote(noteId, { notes: updatedNotes, title: updatedTitle });
       setSuccess("Note updated successfully!");
       setEditingNote(null);
       await fetchNotes();
@@ -930,7 +941,7 @@ export default function Home() {
                                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                       </svg>
-                                      <span className="truncate">{note.notes.substring(0, 30)}{note.notes.length > 30 ? '...' : ''}</span>
+                                      <span className="truncate">{note.title}</span>
                                     </button>
                                   ))
                                 )}
@@ -959,6 +970,9 @@ export default function Home() {
                       </svg>
                       Back
                     </Button>
+                    <h2 className="text-lg font-semibold flex-1 mx-4 truncate" style={{ color: "oklch(0.985 0 0)" }}>
+                      {selectedNote.title}
+                    </h2>
                     <div className="flex items-center space-x-2">
                       <Button
                         variant="ghost"
@@ -966,6 +980,7 @@ export default function Home() {
                         onClick={() => {
                           setEditingNote(selectedNote.id);
                           setEditNoteMarkdown(selectedNote.notes);
+                          setEditNoteTitle(selectedNote.title);
                         }}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -987,6 +1002,14 @@ export default function Home() {
                   
                   {editingNote === selectedNote.id ? (
                     <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={editNoteTitle}
+                        onChange={(e) => setEditNoteTitle(e.target.value)}
+                        className="w-full px-3 py-2 rounded-md border bg-background text-foreground text-lg font-semibold"
+                        style={{ borderColor: "oklch(1 0 0 / 15%)", backgroundColor: "oklch(1 0 0)" }}
+                        placeholder="Note title..."
+                      />
                       <div 
                         className="rounded-lg overflow-hidden"
                         style={{ backgroundColor: "oklch(1 0 0)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
@@ -1030,7 +1053,7 @@ export default function Home() {
                       <div className="flex space-x-2">
                         <Button
                           onClick={() => {
-                            handleUpdateNote(selectedNote.id, editNoteMarkdown);
+                            handleUpdateNote(selectedNote.id, editNoteMarkdown, editNoteTitle);
                             setEditingNote(null);
                             setNotePreview(false);
                           }}
@@ -1070,6 +1093,19 @@ export default function Home() {
                       <CardTitle style={{ color: "oklch(0.985 0 0)" }}>New Note</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
+                          Title
+                        </label>
+                        <input
+                          type="text"
+                          value={noteForm.title}
+                          onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
+                          className="w-full px-3 py-2 rounded-md border bg-background text-foreground"
+                          style={{ borderColor: "oklch(1 0 0 / 15%)" }}
+                          placeholder="Enter note title..."
+                        />
+                      </div>
                       <div>
                         <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
                           Folder (Optional)
@@ -1166,10 +1202,10 @@ export default function Home() {
                                 className="text-sm font-medium mb-1 truncate"
                                 style={{ color: "oklch(0.985 0 0)" }}
                               >
-                                {note.notes.substring(0, 40)}{note.notes.length > 40 ? '...' : ''}
+                                {note.title}
                               </div>
                               <div className="text-xs text-muted-foreground truncate">
-                                {note.notes}
+                                {note.notes.substring(0, 50)}{note.notes.length > 50 ? '...' : ''}
                               </div>
                             </CardContent>
                           </Card>
@@ -1201,7 +1237,7 @@ export default function Home() {
                     style={{ borderColor: "oklch(1 0 0 / 10%)" }}
                   >
                     <div className="text-sm truncate" style={{ color: "oklch(0.985 0 0)" }}>
-                      {note.notes.substring(0, 50)}{note.notes.length > 50 ? '...' : ''}
+                      {note.title}
                     </div>
                   </button>
                 ))}

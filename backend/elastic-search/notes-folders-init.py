@@ -14,6 +14,7 @@ folders_index = "folders-index"
 
 notes_mappings = {
     "properties": {
+        "title": { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
         "notes": { "type": "text" },
         "folder_id": { "type": "keyword" },
         "created_at": { "type": "date" },

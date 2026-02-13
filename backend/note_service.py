@@ -16,17 +16,20 @@ notes_index = "notes-index"
 
 
 class NoteCreate(BaseModel):
+    title: str
     notes: str
     folder_id: Optional[str] = None
 
 
 class NoteUpdate(BaseModel):
+    title: Optional[str] = None
     notes: Optional[str] = None
     folder_id: Optional[str] = None
 
 
 class NoteResponse(BaseModel):
     id: str
+    title: str
     notes: str
     folder_id: Optional[str] = None
     created_at: Optional[str] = None
@@ -43,6 +46,7 @@ class NoteService:
         try:
             now = datetime.utcnow().isoformat()
             doc = {
+                "title": note.title,
                 "notes": note.notes,
                 "created_at": now,
                 "updated_at": now
@@ -87,6 +91,8 @@ class NoteService:
 
             update_data = {"updated_at": datetime.utcnow().isoformat()}
 
+            if note_update.title is not None:
+                update_data["title"] = note_update.title
             if note_update.notes:
                 update_data["notes"] = note_update.notes
             if note_update.folder_id is not None:

@@ -16,17 +16,20 @@ export interface CourseResponse extends CourseCreate {
 
 // Note interfaces
 export interface NoteCreate {
+  title: string;
   notes: string;
   folder_id?: string;
 }
 
 export interface NoteUpdate {
+  title?: string;
   notes?: string;
   folder_id?: string;
 }
 
 export interface NoteResponse {
   id: string;
+  title: string;
   notes: string;
   folder_id?: string;
   created_at?: string;
