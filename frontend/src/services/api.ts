@@ -29,6 +29,8 @@ export interface NoteResponse {
   id: string;
   notes: string;
   folder_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Folder interfaces
@@ -43,6 +45,8 @@ export interface FolderUpdate {
 export interface FolderResponse {
   id: string;
   folder_name: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Agent chat interfaces

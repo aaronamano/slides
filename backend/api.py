@@ -229,7 +229,7 @@ async def get_courses_for_dropdown():
 async def get_all_notes():
     """Get all notes"""
     try:
-        return await note_service.get_all_notes()
+        return note_service.get_all_notes()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -237,7 +237,7 @@ async def get_all_notes():
 async def get_note_by_id(note_id: str):
     """Get a specific note by ID"""
     try:
-        note = await note_service.get_note_by_id(note_id)
+        note = note_service.get_note_by_id(note_id)
         if not note:
             raise HTTPException(status_code=404, detail="Note not found")
         return note
@@ -250,7 +250,7 @@ async def get_note_by_id(note_id: str):
 async def create_note(note: NoteCreate):
     """Create a new note"""
     try:
-        return await note_service.create_note(note)
+        return note_service.create_note(note)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -258,7 +258,7 @@ async def create_note(note: NoteCreate):
 async def update_note(note_id: str, note_update: NoteUpdate):
     """Update an existing note"""
     try:
-        note = await note_service.update_note(note_id, note_update)
+        note = note_service.update_note(note_id, note_update)
         if not note:
             raise HTTPException(status_code=404, detail="Note not found")
         return note
@@ -271,7 +271,7 @@ async def update_note(note_id: str, note_update: NoteUpdate):
 async def delete_note(note_id: str):
     """Delete a note"""
     try:
-        success = await note_service.delete_note(note_id)
+        success = note_service.delete_note(note_id)
         if not success:
             raise HTTPException(status_code=404, detail="Note not found")
         return {"message": "Note deleted successfully"}
@@ -285,7 +285,7 @@ async def delete_note(note_id: str):
 async def get_all_folders():
     """Get all folders"""
     try:
-        return await folder_service.get_all_folders()
+        return folder_service.get_all_folders()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -293,7 +293,7 @@ async def get_all_folders():
 async def get_folder_by_id(folder_id: str):
     """Get a specific folder by ID"""
     try:
-        folder = await folder_service.get_folder_by_id(folder_id)
+        folder = folder_service.get_folder_by_id(folder_id)
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
         return folder
@@ -306,7 +306,7 @@ async def get_folder_by_id(folder_id: str):
 async def create_folder(folder: FolderCreate):
     """Create a new folder"""
     try:
-        return await folder_service.create_folder(folder)
+        return folder_service.create_folder(folder)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -314,7 +314,7 @@ async def create_folder(folder: FolderCreate):
 async def update_folder(folder_id: str, folder_update: FolderUpdate):
     """Update an existing folder"""
     try:
-        folder = await folder_service.update_folder(folder_id, folder_update)
+        folder = folder_service.update_folder(folder_id, folder_update)
         if not folder:
             raise HTTPException(status_code=404, detail="Folder not found")
         return folder
@@ -327,7 +327,7 @@ async def update_folder(folder_id: str, folder_update: FolderUpdate):
 async def delete_folder(folder_id: str):
     """Delete a folder"""
     try:
-        success = await folder_service.delete_folder(folder_id)
+        success = folder_service.delete_folder(folder_id)
         if not success:
             raise HTTPException(status_code=404, detail="Folder not found")
         return {"message": "Folder deleted successfully"}

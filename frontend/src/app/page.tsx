@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import ReactMarkdown from "react-markdown";
 
 type TabType = "slides" | "upload" | "addCourse" | "notes";
 
@@ -70,6 +71,8 @@ export default function Home() {
     folder_id: ""
   });
   const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [notePreview, setNotePreview] = useState(false);
+  const [editNoteMarkdown, setEditNoteMarkdown] = useState("");
 
   const [folders, setFolders] = useState<FolderResponse[]>([]);
   const [, setFoldersLoading] = useState(false);
@@ -234,6 +237,7 @@ export default function Home() {
       });
       setSuccess("Note created successfully!");
       setNoteForm({ notes: "", folder_id: "" });
+      setNotePreview(false);
       await fetchNotes();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create note");
@@ -426,7 +430,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-background">
       <div 
-        className="h-12 flex items-center justify-between px-4 border-b flex-shrink-0"
+        className="h-12 flex items-center justify-between px-4 border-b shrink-0"
         style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
       >
         <div className="flex items-center space-x-3">
@@ -465,7 +469,7 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
         {showLeftNav && (
           <div 
-            className="w-44 flex flex-col items-center py-6 space-y-3 border-r flex-shrink-0"
+            className="w-44 flex flex-col items-center py-6 space-y-3 border-r shrink-0"
             style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
           >
             {colorTabs.map((tab) => (
@@ -788,7 +792,7 @@ export default function Home() {
 
         {activeTab === "notes" && (
           <div className="flex h-full gap-4">
-            <div className="w-72 flex-shrink-0">
+            <div className="w-72 shrink-0">
               <h2 className="text-xl font-bold mb-4" style={{ color: "oklch(0.985 0 0)" }}>Notes</h2>
               
               <div className="flex items-center space-x-2 mb-4">
@@ -923,7 +927,7 @@ export default function Home() {
                                           : "hover:bg-muted/50"
                                       }`}
                                     >
-                                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                       </svg>
                                       <span className="truncate">{note.notes.substring(0, 30)}{note.notes.length > 30 ? '...' : ''}</span>
@@ -959,7 +963,10 @@ export default function Home() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setEditingNote(selectedNote.id)}
+                        onClick={() => {
+                          setEditingNote(selectedNote.id);
+                          setEditNoteMarkdown(selectedNote.notes);
+                        }}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -980,17 +987,52 @@ export default function Home() {
                   
                   {editingNote === selectedNote.id ? (
                     <div className="space-y-3">
-                      <textarea
-                        defaultValue={selectedNote.notes}
-                        className="w-full px-4 py-3 rounded-lg border bg-background text-foreground text-lg min-h-[400px]"
-                        style={{ borderColor: "oklch(1 0 0 / 15%)" }}
-                        id={`edit-note-${selectedNote.id}`}
-                      />
+                      <div 
+                        className="rounded-lg overflow-hidden"
+                        style={{ backgroundColor: "oklch(1 0 0)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
+                      >
+                        <div 
+                          className="flex items-center justify-between px-3 py-2 border-b"
+                          style={{ borderColor: "oklch(0.9 0 0)", backgroundColor: "oklch(0.98 0 0)" }}
+                        >
+                          <span className="text-sm" style={{ color: "oklch(0.5 0 0)" }}>Markdown</span>
+                          <button
+                            type="button"
+                            onClick={() => setNotePreview(!notePreview)}
+                            className="text-xs px-2 py-1 rounded transition-colors"
+                            style={{ 
+                              backgroundColor: notePreview ? "#0B64DD" : "oklch(0.9 0 0)",
+                              color: notePreview ? "white" : "oklch(0.3 0 0)"
+                            }}
+                          >
+                            {notePreview ? "Edit" : "Preview"}
+                          </button>
+                        </div>
+                        {notePreview ? (
+                          <div className="w-full min-h-100 p-4">
+                            <div className="prose prose-sm max-w-none" style={{ color: "oklch(0.2 0 0)" }}>
+                              <ReactMarkdown>{editNoteMarkdown}</ReactMarkdown>
+                            </div>
+                          </div>
+                        ) : (
+                          <textarea
+                            value={editNoteMarkdown}
+                            onChange={(e) => setEditNoteMarkdown(e.target.value)}
+                            className="w-full min-h-100 p-4 outline-none resize-none font-mono text-sm"
+                            style={{ 
+                              color: "oklch(0.2 0 0)",
+                              backgroundColor: "oklch(1 0 0)"
+                            }}
+                            placeholder="Write your note in markdown..."
+                          />
+                        )}
+                      </div>
                       <div className="flex space-x-2">
                         <Button
                           onClick={() => {
-                            const textarea = document.getElementById(`edit-note-${selectedNote.id}`) as HTMLTextAreaElement;
-                            handleUpdateNote(selectedNote.id, textarea.value);
+                            handleUpdateNote(selectedNote.id, editNoteMarkdown);
+                            setEditingNote(null);
+                            setNotePreview(false);
                           }}
                           style={{ backgroundColor: "#008A5E" }}
                         >
@@ -998,18 +1040,27 @@ export default function Home() {
                         </Button>
                         <Button
                           variant="outline"
-                          onClick={() => setEditingNote(null)}
+                          onClick={() => {
+                            setEditingNote(null);
+                            setNotePreview(false);
+                          }}
                         >
                           Cancel
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
-                      <CardContent className="pt-6">
-                        <p className="whitespace-pre-wrap text-lg" style={{ color: "oklch(0.985 0 0)" }}>{selectedNote.notes}</p>
-                      </CardContent>
-                    </Card>
+                    <div 
+                      className="rounded-lg p-6"
+                      style={{ backgroundColor: "oklch(1 0 0)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
+                    >
+                      <div 
+                        className="prose prose-sm max-w-none text-lg"
+                        style={{ color: "oklch(0.2 0 0)" }}
+                      >
+                        <ReactMarkdown>{selectedNote.notes}</ReactMarkdown>
+                      </div>
+                    </div>
                   )}
                 </div>
               ) : (
@@ -1037,17 +1088,51 @@ export default function Home() {
                           ))}
                         </select>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>
-                          Note Content
-                        </label>
-                        <textarea
-                          value={noteForm.notes}
-                          onChange={(e) => setNoteForm({ ...noteForm, notes: e.target.value })}
-                          className="w-full px-3 py-2 rounded-md border bg-background text-foreground min-h-[200px]"
-                          style={{ borderColor: "oklch(1 0 0 / 15%)" }}
-                          placeholder="Start typing your note..."
-                        />
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-sm font-medium" style={{ color: "oklch(0.9 0 0)" }}>
+                            Note Content
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setNotePreview(!notePreview)}
+                            className="text-xs px-2 py-1 rounded transition-colors"
+                            style={{ 
+                              backgroundColor: notePreview ? "#0B64DD" : "oklch(0.9 0 0)",
+                              color: notePreview ? "white" : "oklch(0.3 0 0)"
+                            }}
+                          >
+                            {notePreview ? "Edit" : "Preview"}
+                          </button>
+                        </div>
+                        <div 
+                          className="rounded-lg overflow-hidden"
+                          style={{ backgroundColor: "oklch(1 0 0)", boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }}
+                        >
+                          {notePreview ? (
+                            <div className="w-full min-h-70 p-4">
+                              <div className="prose prose-sm max-w-none" style={{ color: "oklch(0.2 0 0)" }}>
+                                <ReactMarkdown>{noteForm.notes}</ReactMarkdown>
+                              </div>
+                            </div>
+                          ) : (
+                            <textarea
+                              value={noteForm.notes}
+                              onChange={(e) => setNoteForm({ ...noteForm, notes: e.target.value })}
+                              className="w-full min-h-70 p-4 outline-none resize-none font-mono text-sm"
+                              style={{ 
+                                color: "oklch(0.2 0 0)",
+                                backgroundColor: "oklch(1 0 0)"
+                              }}
+                              placeholder="Write your note in markdown..."
+                            />
+                          )}
+                        </div>
+                        {!notePreview && (
+                          <p className="text-xs" style={{ color: "oklch(0.6 0 0)" }}>
+                            Supports Markdown: **bold**, *italic*, # heading, - list, 1. numbered, `code`
+                          </p>
+                        )}
                       </div>
                       
                       <Button
@@ -1138,7 +1223,7 @@ export default function Home() {
 
       {showAgentChat && (
         <div 
-          className="w-80 border-l flex-shrink-0"
+          className="w-80 border-l shrink-0"
           style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
         >
           <AgentChat />

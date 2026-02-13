@@ -6,6 +6,34 @@ import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+function CopyButton({ content }: { content: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="ml-2 p-1 rounded hover:bg-white/10 transition-colors"
+      title="Copy as markdown"
+    >
+      {copied ? (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -136,8 +164,11 @@ export default function AgentChat() {
                     color: message.role === "user" ? "white" : "oklch(0.9 0 0)"
                   }}
                 >
-                  <div className="font-medium text-xs mb-1 opacity-70">
-                    {message.role === "user" ? "You" : "Agent"}
+                  <div className="font-medium text-xs mb-1 opacity-70 flex items-center">
+                    <span>{message.role === "user" ? "You" : "Agent"}</span>
+                    {message.role === "assistant" && (
+                      <CopyButton content={message.content} />
+                    )}
                   </div>
                   <div className="whitespace-pre-wrap wrap-break-word text-xs">
                     {message.role === "assistant" ? (

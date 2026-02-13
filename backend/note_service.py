@@ -1,118 +1,105 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from mongo_client import MongoClient
-from bson import ObjectId
+from elasticsearch import Elasticsearch
+from dotenv import load_dotenv
+import os
+from datetime import datetime
+
+load_dotenv()
+
+client = Elasticsearch(
+    str(os.getenv('ELASTICSEARCH_URL')),
+    api_key=str(os.getenv('ELASTICSEARCH_API_KEY'))
+)
+
+notes_index = "notes-index"
+
 
 class NoteCreate(BaseModel):
     notes: str
     folder_id: Optional[str] = None
 
+
 class NoteUpdate(BaseModel):
     notes: Optional[str] = None
     folder_id: Optional[str] = None
+
 
 class NoteResponse(BaseModel):
     id: str
     notes: str
     folder_id: Optional[str] = None
-    
+    created_at: Optional[str] = None
+
     class Config:
         from_attributes = True
 
+
 class NoteService:
     def __init__(self):
-        self.collection = None
-    
-    async def _get_collection(self):
-        if self.collection is None:
-            self.collection = await MongoClient.get_notes_collection()
-        return self.collection
-    
-    async def create_note(self, note: NoteCreate) -> NoteResponse:
-        """Create a new note"""
+        pass
+
+    def create_note(self, note: NoteCreate) -> NoteResponse:
         try:
-            collection = await self._get_collection()
-            note_doc = {
-                "notes": note.notes
+            now = datetime.utcnow().isoformat()
+            doc = {
+                "notes": note.notes,
+                "created_at": now,
+                "updated_at": now
             }
-            
             if note.folder_id:
-                note_doc["folder_id"] = note.folder_id
-            
-            result = await collection.insert_one(note_doc)
-            
-            # Retrieve the inserted document
-            inserted_doc = await collection.find_one({"_id": result.inserted_id})
-            inserted_doc['id'] = str(inserted_doc['_id'])
-            del inserted_doc['_id']
-            
-            return NoteResponse(**inserted_doc)
+                doc["folder_id"] = note.folder_id
+
+            response = client.index(index=notes_index, body=doc)
+            doc["id"] = response["_id"]
+            return NoteResponse(**doc)
         except Exception as e:
             raise Exception(f"Error creating note: {str(e)}")
-    
-    async def get_all_notes(self) -> List[NoteResponse]:
-        """Get all notes"""
+
+    def get_all_notes(self) -> List[NoteResponse]:
         try:
-            collection = await self._get_collection()
+            response = client.search(index=notes_index, body={"query": {"match_all": {}}})
             notes = []
-            async for note in collection.find():
-                note['id'] = str(note['_id'])
-                del note['_id']
-                notes.append(NoteResponse(**note))
+            for hit in response["hits"]["hits"]:
+                note_data = hit["_source"]
+                note_data["id"] = hit["_id"]
+                notes.append(NoteResponse(**note_data))
             return notes
         except Exception as e:
             raise Exception(f"Error fetching notes: {str(e)}")
-    
-    async def get_note_by_id(self, note_id: str) -> Optional[NoteResponse]:
-        """Get a specific note by ID"""
+
+    def get_note_by_id(self, note_id: str) -> Optional[NoteResponse]:
         try:
-            collection = await self._get_collection()
-            note = await collection.find_one({"_id": ObjectId(note_id)})
-            if note:
-                note['id'] = str(note['_id'])
-                del note['_id']
-                return NoteResponse(**note)
+            response = client.get(index=notes_index, id=note_id)
+            if response["found"]:
+                note_data = response["_source"]
+                note_data["id"] = response["_id"]
+                return NoteResponse(**note_data)
             return None
         except Exception as e:
-            raise Exception(f"Error fetching note: {str(e)}")
-    
-    async def update_note(self, note_id: str, note_update: NoteUpdate) -> Optional[NoteResponse]:
-        """Update an existing note"""
+            return None
+
+    def update_note(self, note_id: str, note_update: NoteUpdate) -> Optional[NoteResponse]:
         try:
-            # Check if note exists
-            existing = await self.get_note_by_id(note_id)
+            existing = self.get_note_by_id(note_id)
             if not existing:
                 return None
-            
-            collection = await self._get_collection()
-            update_data = {}
-            
+
+            update_data = {"updated_at": datetime.utcnow().isoformat()}
+
             if note_update.notes:
                 update_data["notes"] = note_update.notes
-            
             if note_update.folder_id is not None:
                 update_data["folder_id"] = note_update.folder_id
-            
-            if update_data:
-                await collection.update_one(
-                    {"_id": ObjectId(note_id)}, 
-                    {"$set": update_data}
-                )
-            
-            return await self.get_note_by_id(note_id)
+
+            client.update(index=notes_index, id=note_id, body={"doc": update_data})
+            return self.get_note_by_id(note_id)
         except Exception as e:
             raise Exception(f"Error updating note: {str(e)}")
-    
-    async def delete_note(self, note_id: str) -> bool:
-        """Delete a note"""
+
+    def delete_note(self, note_id: str) -> bool:
         try:
-            # Check if note exists
-            existing = await self.get_note_by_id(note_id)
-            if not existing:
-                return False
-            
-            collection = await self._get_collection()
-            result = await collection.delete_one({"_id": ObjectId(note_id)})
-            return result.deleted_count > 0
+            response = client.delete(index=notes_index, id=note_id)
+            return response.get("result") in ["deleted", "not_found"]
         except Exception as e:
-            raise Exception(f"Error deleting note: {str(e)}")
+            return False
