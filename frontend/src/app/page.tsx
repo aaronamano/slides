@@ -539,7 +539,6 @@ export default function Home() {
 
         {activeTab === "slides" && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold" style={{ color: "oklch(0.985 0 0)" }}>Slides</h2>
             {courses.length === 0 ? (
               <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
                 <CardContent className="pt-6 text-center">
@@ -556,7 +555,7 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle style={{ color: "oklch(0.985 0 0)" }}>{course.name}</CardTitle>
-                        <CardDescription className="text-muted-foreground">ID: {course.id}</CardDescription>
+                        <CardDescription className="text-muted-foreground">{course.id}</CardDescription>
                       </div>
                       <Badge style={{ backgroundColor: "#008B87", color: "white" }}>
                         {slidesData[course.id]?.length || 0} slides
@@ -684,7 +683,6 @@ export default function Home() {
 
         {activeTab === "upload" && (
           <div className="space-y-4 max-w-xl">
-            <h2 className="text-2xl font-bold" style={{ color: "oklch(0.985 0 0)" }}>Upload Slide</h2>
             <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
               <CardContent className="pt-6 space-y-4">
                 <div>
@@ -761,7 +759,6 @@ export default function Home() {
 
         {activeTab === "addCourse" && (
           <div className="space-y-4 max-w-xl">
-            <h2 className="text-2xl font-bold" style={{ color: "oklch(0.985 0 0)" }}>Add New Course</h2>
             <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
               <CardContent className="pt-6 space-y-4">
                 <div>
@@ -804,14 +801,12 @@ export default function Home() {
         {activeTab === "notes" && (
           <div className="flex h-full gap-4">
             <div className="w-72 shrink-0">
-              <h2 className="text-xl font-bold mb-4" style={{ color: "oklch(0.985 0 0)" }}>Notes</h2>
-              
               <div className="flex items-center space-x-2 mb-4">
                 <Input
                   type="text"
                   value={folderForm.name}
                   onChange={(e) => setFolderForm({ ...folderForm, name: e.target.value })}
-                  placeholder="New folder..."
+                  placeholder="Create new folder..."
                   onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
                 />
                 <Button
@@ -837,9 +832,8 @@ export default function Home() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
-                    <span>All Notes</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{notes.filter(n => !n.folder_id).length}</span>
-                  </button>
+                    <span>Create new note</span>                 
+                    </button>
 
                   {folders.map((folder) => {
                     const folderNotes = notes.filter(n => n.folder_id === folder.id);
@@ -1089,9 +1083,6 @@ export default function Home() {
               ) : (
                 <div className="max-w-2xl space-y-6">
                   <Card style={{ backgroundColor: "oklch(0.15 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}>
-                    <CardHeader>
-                      <CardTitle style={{ color: "oklch(0.985 0 0)" }}>New Note</CardTitle>
-                    </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium mb-2" style={{ color: "oklch(0.9 0 0)" }}>

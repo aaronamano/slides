@@ -126,7 +126,7 @@ export default function AgentChat() {
     <div className="flex flex-col h-full" style={{ backgroundColor: "oklch(0.12 0 0)" }}>
       <div className="p-4 border-b" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold" style={{ color: "#0B64DD" }}>Agent Chat</h3>
+          <h3 className="text-lg font-semibold" style={{ color: "#0B64DD" }}>Chat</h3>
           <Button
             variant="ghost"
             size="sm"
@@ -144,7 +144,7 @@ export default function AgentChat() {
             <div className="flex items-center justify-center h-full text-muted-foreground py-12">
               <div className="text-center">
                 <div className="text-3xl mb-2">💬</div>
-                <div className="text-sm">Start a conversation with the agent</div>
+                <div className="text-m">Ask questions about your slides or generated notes</div>
               </div>
             </div>
           ) : (
