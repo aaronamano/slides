@@ -5,7 +5,6 @@ from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
 import os
 import PyPDF2
-from sentence_transformers import SentenceTransformer
 import io
 import base64
 from typing import List
@@ -35,8 +34,6 @@ client = Elasticsearch(
     str(os.getenv('ELASTICSEARCH_URL')),
     api_key=str(os.getenv('ELASTICSEARCH_API_KEY'))
 )
-
-model = SentenceTransformer('all-roberta-large-v1')
 
 index_name = "lecture-slides-index"
 
@@ -132,22 +129,18 @@ async def upload_pdf(
         for page in pdf_reader.pages:
             text_content += page.extract_text()
         
-        vector_content = model.encode(text_content).tolist()
-        
-        # Enhanced document with binary storage
         doc = {
             "course_id": course_id,
             "course_name": course_name,
             "filename": file.filename,
             "title": title,
             "text_content": text_content,
-            "vector_content": vector_content,
             "pdf_binary": pdf_binary,
             "pdf_size": pdf_size,
             "has_binary": True
         }
         
-        response = client.index(index=index_name, body=doc)
+        response = client.index(index=index_name, body=doc, pipeline="elser-pipeline")
         
         return {
             "message": "PDF uploaded and processed successfully",
