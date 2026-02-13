@@ -14,8 +14,8 @@ conda activate slides-env
 python api.py
 ```
 
-# Index DB Schema
-
+# Elastic Search Index DB Schema
+## Lecture Slides Index
 ```json
 {
     "course_id": { "type": "keyword" },
@@ -23,7 +23,7 @@ python api.py
     "filename": { "type": "keyword" },
     "title": { "type": "text" },
     "text_content": { "type": "text" },
-    "vector_content": { "type": "dense_vector", "dims": 1024, "index": True, "similarity": "cosine" },
+    "text_embedding": { "type": "sparse_vector" },
     "pdf_binary": {
         "type": "binary",
         "store": True,
@@ -34,60 +34,56 @@ python api.py
 }
 ```
 
-# Folder Structure
+## Notes Index
+```json
+{
+  "title": { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
+  "notes": { "type": "text" },
+  "folder_id": { "type": "keyword" },
+  "created_at": { "type": "date" },
+  "updated_at": { "type": "date" }
+}
+```
 
+## Folders Index
+```json
+{
+  "folder_name": {
+    "type": "text",
+    "fields": { "keyword": { "type": "keyword" } }
+  },
+  "created_at": { "type": "date" },
+  "updated_at": { "type": "date" }
+}
+```
+
+# Folder Structure
 ```
 └── backend
-    └── __pycache__
-        ├── course_service.cpython-314.pyc
-        ├── mongo_client.cpython-314.pyc
-        ├── note_service.cpython-314.pyc
     └── elastic-search
-        ├── init.py # run this file ONCE to define mappings
-    ├── .env
+        ├── lecture-slides-init.py
+        ├── notes-folders-init.py
+        ├── PIPELINE.md
+        ├── RESULT.md
     ├── .gitignore
     ├── api.py
     ├── BACKEND.md
     ├── course_service.py
+    ├── folder_service.py
     ├── mongo_client.py
     ├── note_service.py
     └── requirements.txt
 ```
 
-# API Routes
-
-- POST `/api/upload`
-- GET `/api/slides/{course_id}`
-- POST `/api/agent_builder/mcp`
-
 # Process
-
-import PDF file ➡️ extract text ➡️ embed text to 1024 dimension vectors ➡️ add extracted text to `text_content` as a string and add vector embeddings to `vector_content` as an array of decimal values
+import PDF file ➡️ extract text ➡️ embed text to sparse vectors ➡️ add extracted text to `text_content` as a string and add vector embeddings to `text_embedding`
 
 # MongoDB
-
 ## Courses Collection
 
 ```typescript
 {
-  "course_id": String,
-  "course_name": String,
-}
-```
-
-## Notes Collection
-
-```typescript
-{
-  "folder_id": String,
-  "notes": String
-}
-```
-
-## Folder Collection
-
-```typescript
-{
-    "folder_name": String
+  "course_id": string,
+  "course_name": string,
 }
 ```
