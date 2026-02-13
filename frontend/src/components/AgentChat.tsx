@@ -5,7 +5,6 @@ import { Message } from "@/services/api";
 import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -111,7 +110,7 @@ export default function AgentChat() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
+      <div className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-3">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground py-12">
@@ -198,7 +197,7 @@ export default function AgentChat() {
           
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {error && (
         <div className="p-3 border-t" style={{ borderColor: "oklch(1 0 0 / 10%)" }}>
