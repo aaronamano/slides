@@ -45,6 +45,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showLeftNav, setShowLeftNav] = useState(true);
+  const [showAgentChat, setShowAgentChat] = useState(true);
 
   const [courses, setCourses] = useState<CourseWithSlides[]>([]);
   const [slidesData, setSlidesData] = useState<{ [key: string]: SlideData[] }>({});
@@ -411,11 +413,6 @@ export default function Home() {
     }
   };
 
-  const getTabColor = (tabId: TabType) => {
-    const tab = colorTabs.find(t => t.id === tabId);
-    return tab?.color || "#0B64DD";
-  };
-
   if (loading && courses.length === 0) {
     return (
       <div className="flex h-screen bg-background items-center justify-center">
@@ -427,35 +424,72 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex flex-col h-screen bg-background">
       <div 
-        className="w-44 flex flex-col items-center py-6 space-y-3 border-r"
+        className="h-12 flex items-center justify-between px-4 border-b flex-shrink-0"
         style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
       >
-        <div className="text-lg font-bold mb-4" style={{ color: getTabColor(activeTab) }}>
-          SlideES
-        </div>
-        {colorTabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`w-36 h-12 rounded-xl flex items-center justify-center transition-all font-medium ${
-              activeTab === tab.id
-                ? "shadow-lg"
-                : "hover:bg-muted/50"
-            }`}
-            style={{
-              backgroundColor: activeTab === tab.id ? tab.color : "transparent",
-              color: activeTab === tab.id ? "white" : "oklch(0.7 0 0)",
-              boxShadow: activeTab === tab.id ? `0 4px 20px ${tab.color}40` : "none",
+        <div className="flex items-center space-x-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowLeftNav(!showLeftNav)}
+            style={{ 
+              backgroundColor: showLeftNav ? "#0B64DD" : "transparent",
+              color: showLeftNav ? "white" : "oklch(0.7 0 0)"
             }}
           >
-            <span className="text-sm">{tab.label}</span>
-          </button>
-        ))}
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            Menu
+          </Button>
+          <span className="text-lg font-bold" style={{ color: "#0B64DD" }}>SlideES</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowAgentChat(!showAgentChat)}
+          style={{ 
+            backgroundColor: showAgentChat ? "#BC1E70" : "transparent",
+            color: showAgentChat ? "white" : "oklch(0.7 0 0)"
+          }}
+        >
+          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+          Agent
+        </Button>
       </div>
-
-      <div className="flex-1 p-6 overflow-auto">
+      
+      <div className="flex flex-1 overflow-hidden">
+        {showLeftNav && (
+          <div 
+            className="w-44 flex flex-col items-center py-6 space-y-3 border-r flex-shrink-0"
+            style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
+          >
+            {colorTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-36 h-12 rounded-xl flex items-center justify-center transition-all font-medium ${
+                  activeTab === tab.id
+                    ? "shadow-lg"
+                    : "hover:bg-muted/50"
+                }`}
+                style={{
+                  backgroundColor: activeTab === tab.id ? tab.color : "transparent",
+                  color: activeTab === tab.id ? "white" : "oklch(0.7 0 0)",
+                  boxShadow: activeTab === tab.id ? `0 4px 20px ${tab.color}40` : "none",
+                }}
+              >
+                <span className="text-sm">{tab.label}</span>
+              </button>
+            ))}
+          </div>
+          )}
+          
+          <div className="flex-1 p-6 overflow-auto">
         {error && (
           <div 
             className="mb-4 p-4 rounded-lg flex items-center justify-between"
@@ -1102,11 +1136,14 @@ export default function Home() {
         )}
       </div>
 
-      <div 
-        className="w-80 border-l flex-shrink-0"
-        style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
-      >
-        <AgentChat />
+      {showAgentChat && (
+        <div 
+          className="w-80 border-l flex-shrink-0"
+          style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
+        >
+          <AgentChat />
+        </div>
+      )}
       </div>
     </div>
   );
