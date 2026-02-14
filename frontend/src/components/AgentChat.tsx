@@ -292,7 +292,7 @@ export default function AgentChat() {
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[95%] px-4 py-3 rounded-lg text-sm ${
+                  className={`max-w-full px-4 py-3 rounded-lg text-sm ${
                     message.role === "user"
                       ? "text-white"
                       : ""

@@ -1247,7 +1247,7 @@ export default function Home() {
 
       {showAgentChat && (
         <div 
-          className="w-80 border-l shrink-0"
+          className="w-125 border-l shrink-0"
           style={{ backgroundColor: "oklch(0.12 0 0)", borderColor: "oklch(1 0 0 / 10%)" }}
         >
           <AgentChat />
