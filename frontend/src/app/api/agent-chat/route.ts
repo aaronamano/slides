@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -22,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const agentUrl = `${kibanaUrl}/api/agent_builder/converse`;
+    const agentUrl = `${kibanaUrl}/api/agent_builder/converse/async`;
     
     const payload = {
       "input": input,
@@ -49,16 +51,41 @@ export async function POST(request: NextRequest) {
         { status: response.status }
       );
     }
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
     
-    const data = await response.json();
-    
-    // Extract the message from the response - it's at data.response.message
-    if (data.response && data.response.message) {
-      return NextResponse.json({ message: data.response.message });
-    }
-    
-    // Fallback: return the whole data if message not found
-    return NextResponse.json({ message: JSON.stringify(data) });
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          controller.close();
+          return;
+        }
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            controller.enqueue(encoder.encode(chunk));
+          }
+        } catch (error) {
+          console.error('Stream error:', error);
+        } finally {
+          controller.close();
+        }
+      }
+    });
+
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
     
   } catch (error) {
     console.error('Server error:', error);

@@ -63,6 +63,8 @@ export default function AgentChat() {
     setError(null);
     setIsLoading(true);
 
+    setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
     try {
       const response = await fetch('/api/agent-chat', {
         method: 'POST',
@@ -77,21 +79,157 @@ export default function AgentChat() {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
       
-      let agentResponse = "";
-      if (data.message) {
-        agentResponse = data.message;
-      } else {
-        agentResponse = JSON.stringify(data, null, 2);
+      let buffer = "";
+      let finalMessage = "";
+      const toolSteps: string[] = [];
+      let currentEvent = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || "";
+          
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7);
+              continue;
+            }
+            
+            if (line.startsWith(':') && !line.startsWith(': ')) continue;
+            
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.slice(6);
+                const data = JSON.parse(jsonStr);
+                
+                const eventData = data.data;
+                const message = data.response?.message;
+                const roundMessage = eventData?.round?.response?.message;
+                
+                if (roundMessage) {
+                  finalMessage = roundMessage;
+                  setMessages(prev => {
+                    const newMsgs = [...prev];
+                    if (newMsgs[newMsgs.length - 1]?.role === 'assistant') {
+                      newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: finalMessage };
+                    }
+                    return newMsgs;
+                  });
+                  continue;
+                }
+                
+                if (message) {
+                  finalMessage = message;
+                  setMessages(prev => {
+                    const newMsgs = [...prev];
+                    if (newMsgs[newMsgs.length - 1]?.role === 'assistant') {
+                      newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: finalMessage };
+                    }
+                    return newMsgs;
+                  });
+                  continue;
+                }
+                
+                if (eventData?.reasoning) {
+                  const step = `🤔 ${eventData.reasoning}`;
+                  if (!toolSteps.includes(step)) {
+                    toolSteps.push(step);
+                    finalMessage = toolSteps.join('\n\n');
+                    setMessages(prev => {
+                      const newMsgs = [...prev];
+                      if (newMsgs[newMsgs.length - 1]?.role === 'assistant') {
+                        newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: finalMessage };
+                      }
+                      return newMsgs;
+                    });
+                  }
+                } else if (eventData?.message) {
+                  const step = `🔧 ${eventData.message}`;
+                  if (!toolSteps.includes(step)) {
+                    toolSteps.push(step);
+                    finalMessage = toolSteps.join('\n\n');
+                    setMessages(prev => {
+                      const newMsgs = [...prev];
+                      if (newMsgs[newMsgs.length - 1]?.role === 'assistant') {
+                        newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: finalMessage };
+                      }
+                      return newMsgs;
+                    });
+                  }
+                } else if (eventData?.tool_id === 'platform.core.search') {
+                  const step = `🔍 Searching: ${eventData.params?.query || eventData.params?.index || '...'}`;
+                  if (!toolSteps.includes(step)) {
+                    toolSteps.push(step);
+                    finalMessage = toolSteps.join('\n\n');
+                    setMessages(prev => {
+                      const newMsgs = [...prev];
+                      if (newMsgs[newMsgs.length - 1]?.role === 'assistant') {
+                        newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: finalMessage };
+                      }
+                      return newMsgs;
+                    });
+                  }
+                }
+              } catch {}
+            }
+          }
+        }
+        
+        if (buffer && !finalMessage) {
+          const lines = buffer.split('\n');
+          for (const line of lines) {
+            if (line.startsWith(':') && !line.startsWith(': ')) continue;
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.slice(6);
+                const data = JSON.parse(jsonStr);
+                
+                const eventData = data.data;
+                const message = data.response?.message;
+                const roundMessage = eventData?.round?.response?.message;
+                
+                if (roundMessage) {
+                  finalMessage = roundMessage;
+                } else if (message) {
+                  finalMessage = message;
+                } else if (eventData?.reasoning) {
+                  const step = `🤔 ${eventData.reasoning}`;
+                  if (!toolSteps.includes(step)) {
+                    toolSteps.push(step);
+                  }
+                } else if (eventData?.message) {
+                  const step = `🔧 ${eventData.message}`;
+                  if (!toolSteps.includes(step)) {
+                    toolSteps.push(step);
+                  }
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+
+      if (!finalMessage && toolSteps.length > 0) {
+        finalMessage = toolSteps.join('\n\n');
       }
       
-      const agentMessage: Message = {
-        role: "assistant",
-        content: agentResponse
-      };
-
-      setMessages(prev => [...prev, agentMessage]);
+      if (finalMessage) {
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          if (newMsgs[newMsgs.length - 1]?.role === 'assistant') {
+            newMsgs[newMsgs.length - 1] = { ...newMsgs[newMsgs.length - 1], content: finalMessage };
+          }
+          return newMsgs;
+        });
+      }
     } catch (err) {
       console.error('Agent chat error:', err);
       const errorMessage = err instanceof Error ? err.message : "Failed to send message";
