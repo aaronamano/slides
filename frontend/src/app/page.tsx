@@ -997,8 +997,8 @@ export default function Home() {
                         type="text"
                         value={editNoteTitle}
                         onChange={(e) => setEditNoteTitle(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md border bg-background text-foreground text-lg font-semibold"
-                        style={{ borderColor: "oklch(1 0 0 / 15%)", backgroundColor: "oklch(1 0 0)" }}
+                        className="w-full px-3 py-2 rounded-md border text-lg font-semibold"
+                        style={{ borderColor: "oklch(1 0 0 / 15%)", backgroundColor: "oklch(1 0 0)", color: "oklch(0.2 0 0)" }}
                         placeholder="Note title..."
                       />
                       <div 
