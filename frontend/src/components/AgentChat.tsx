@@ -1,33 +1,50 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Message } from "@/services/api";
+import { Message, apiService, NoteCreate } from "@/services/api";
 import Markdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-function CopyButton({ content }: { content: string }) {
-  const [copied, setCopied] = useState(false);
+function AddToNotesButton({ content }: { content: string }) {
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleAddToNotes = async () => {
+    setSaving(true);
+    try {
+      const noteData: NoteCreate = {
+        title: `Note from Agent - ${new Date().toLocaleDateString()}`,
+        notes: content,
+      };
+      await apiService.createNote(noteData);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      console.error('Failed to create note:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <button
-      onClick={handleCopy}
-      className="ml-2 p-1 rounded hover:bg-white/10 transition-colors"
-      title="Copy as markdown"
+      onClick={handleAddToNotes}
+      disabled={saving}
+      className="ml-2 p-1 rounded hover:bg-white/10 transition-colors disabled:opacity-50"
+      title="Add to notes"
     >
-      {copied ? (
+      {saved ? (
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
+      ) : saving ? (
+        <svg className="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
       ) : (
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
       )}
     </button>
@@ -85,7 +102,6 @@ export default function AgentChat() {
       let buffer = "";
       let finalMessage = "";
       const toolSteps: string[] = [];
-      let currentEvent = "";
 
       if (reader) {
         while (true) {
@@ -99,7 +115,7 @@ export default function AgentChat() {
           
           for (const line of lines) {
             if (line.startsWith('event: ')) {
-              currentEvent = line.slice(7);
+              line.slice(7);
               continue;
             }
             
@@ -305,7 +321,7 @@ export default function AgentChat() {
                   <div className="font-medium text-xs mb-1 opacity-70 flex items-center">
                     <span>{message.role === "user" ? "You" : "Agent"}</span>
                     {message.role === "assistant" && (
-                      <CopyButton content={message.content} />
+                      <AddToNotesButton content={message.content} />
                     )}
                   </div>
                   <div className="whitespace-pre-wrap wrap-break-word text-xs">
